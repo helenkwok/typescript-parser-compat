@@ -19,6 +19,20 @@ A usable file parser should be able to:
 - expose syntax diagnostics and traversal primitives;
 - work without a `tsconfig`, module resolution, or type checking.
 
+## Reference coverage
+
+The TypeScript 6 reference suite currently exercises:
+
+- project-less TS and TSX parsing;
+- distinct JS and JSX script-kind selection;
+- UTF-8 BOM preservation and UTF-16 node offsets;
+- line comments, block comments, and scanner trivia;
+- located syntax diagnostics for malformed input;
+- decorators and modern TypeScript syntax;
+- JSX nodes and parent links.
+
+Until the native preview exposes a direct source-text parser, a sentinel test verifies that no matching entry point has appeared unnoticed. When it does appear, CI will request a native adapter and the same contract will be run against it.
+
 ## Run locally
 
 ```bash
@@ -27,7 +41,7 @@ npm test
 npm run report
 ```
 
-`npm run report` writes `compatibility-report.json` with package versions and detected API capabilities.
+`npm run report` writes `compatibility-report.json` with package versions, detected native API capabilities, and reference-fixture coverage.
 
 ## Package roles
 
