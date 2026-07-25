@@ -1,0 +1,19 @@
+{
+  "name": "typescript-parser-compat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Executable compatibility research for parser-facing TypeScript APIs.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "report": "node scripts/report.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "latest",
+    "typescript": "next",
+    "typescript6": "npm:@typescript/typescript6@6.0.2"
+  }
+}
