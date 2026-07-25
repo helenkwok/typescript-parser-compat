@@ -48,18 +48,21 @@ test("TypeScript 6 preserves JSX syntax and parent links", () => {
   assert.ok(sourceFile.statements[1].parent === sourceFile);
 });
 
-test("native preview exposes AST traversal primitives", () => {
+test("native preview exposes AST utility primitives", () => {
   assert.equal(typeof nativeAst.SyntaxKind, "object");
-  assert.equal(typeof nativeAst.forEachChild, "function");
+  assert.equal(typeof nativeAst.createScanner, "function");
+  assert.equal(typeof nativeAst.visitNode, "function");
+  assert.equal(typeof nativeAst.getTokenAtPosition, "function");
 });
 
-test("native preview advertises a direct source-text parser when one exists", () => {
+test("native parser entry-point appearance triggers an adapter update", () => {
   const candidates = Object.keys(nativeAst).filter((name) =>
     /^(createSourceFile|parse|parseSourceFile|sourceFileFromText)$/i.test(name),
   );
 
-  assert.ok(
-    candidates.length > 0,
-    "No direct source-text parser is exported from unstable/ast yet",
+  assert.deepEqual(
+    candidates,
+    [],
+    `Native parser entry point(s) appeared: ${candidates.join(", ")}. Add a native parser adapter and replace this sentinel test with contract tests.`,
   );
 });
