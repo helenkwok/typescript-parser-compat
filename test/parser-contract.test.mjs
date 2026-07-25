@@ -53,13 +53,14 @@ test("native preview exposes AST traversal primitives", () => {
   assert.equal(typeof nativeAst.forEachChild, "function");
 });
 
-test("native preview advertises a direct source-text parser when one exists", () => {
+test("native parser entry-point appearance triggers an adapter update", () => {
   const candidates = Object.keys(nativeAst).filter((name) =>
     /^(createSourceFile|parse|parseSourceFile|sourceFileFromText)$/i.test(name),
   );
 
-  assert.ok(
-    candidates.length > 0,
-    "No direct source-text parser is exported from unstable/ast yet",
+  assert.deepEqual(
+    candidates,
+    [],
+    `Native parser entry point(s) appeared: ${candidates.join(", ")}. Add a native parser adapter and replace this sentinel test with contract tests.`,
   );
 });
