@@ -48,9 +48,11 @@ test("TypeScript 6 preserves JSX syntax and parent links", () => {
   assert.ok(sourceFile.statements[1].parent === sourceFile);
 });
 
-test("native preview exposes AST traversal primitives", () => {
+test("native preview exposes AST utility primitives", () => {
   assert.equal(typeof nativeAst.SyntaxKind, "object");
-  assert.equal(typeof nativeAst.forEachChild, "function");
+  assert.equal(typeof nativeAst.createScanner, "function");
+  assert.equal(typeof nativeAst.visitNode, "function");
+  assert.equal(typeof nativeAst.getTokenAtPosition, "function");
 });
 
 test("native parser entry-point appearance triggers an adapter update", () => {
