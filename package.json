@@ -14,6 +14,6 @@
   "devDependencies": {
     "@typescript/native-preview": "latest",
     "typescript": "next",
-    "typescript6": "npm:@typescript/typescript6@6.0.3"
+    "typescript6": "npm:@typescript/typescript6@6.0.2"
   }
 }
