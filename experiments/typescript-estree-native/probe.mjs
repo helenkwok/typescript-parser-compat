@@ -74,32 +74,66 @@ function attemptConversion(sourceFile, fileName, overrides = {}) {
   }
 }
 
-function describeNode(node) {
-  const nativeKindName = nativeAst.SyntaxKind[node.kind] ?? String(node.kind);
+function describeKind(node) {
+  if (!node || typeof node.kind !== "number") {
+    return null;
+  }
   const translatedKind = translateKind(node.kind);
   return {
     nativeKind: node.kind,
-    nativeKindName,
+    nativeKindName: nativeAst.SyntaxKind[node.kind] ?? String(node.kind),
     translatedKind,
     translatedKindName: ts.SyntaxKind[translatedKind] ?? String(translatedKind),
+    text: node.text ?? null,
+  };
+}
+
+function describeNodeList(nodes) {
+  return nodes ? Array.from(nodes, describeKind) : null;
+}
+
+function describeNode(node) {
+  const children = [];
+  node.forEachChild(
+    (child) => {
+      children.push(describeKind(child));
+      return undefined;
+    },
+    (list) => {
+      for (const child of list) {
+        children.push(describeKind(child));
+      }
+      return undefined;
+    },
+  );
+
+  let legacyDecorators;
+  let legacyModifiers;
+  try {
+    legacyDecorators = ts.canHaveDecorators(node)
+      ? describeNodeList(ts.getDecorators(node))
+      : null;
+  } catch (error) {
+    legacyDecorators = { error: String(error?.message ?? error) };
+  }
+  try {
+    legacyModifiers = ts.canHaveModifiers(node)
+      ? describeNodeList(ts.getModifiers(node))
+      : null;
+  } catch (error) {
+    legacyModifiers = { error: String(error?.message ?? error) };
+  }
+
+  return {
+    ...describeKind(node),
     keys: Object.keys(node).sort(),
-    name:
-      node.name && typeof node.name.kind === "number"
-        ? {
-            nativeKindName:
-              nativeAst.SyntaxKind[node.name.kind] ?? String(node.name.kind),
-            text: node.name.text ?? null,
-          }
-        : null,
-    expression:
-      node.expression && typeof node.expression.kind === "number"
-        ? {
-            nativeKindName:
-              nativeAst.SyntaxKind[node.expression.kind] ??
-              String(node.expression.kind),
-            text: node.expression.text ?? null,
-          }
-        : null,
+    name: describeKind(node.name),
+    expression: describeKind(node.expression),
+    rawModifiers: describeNodeList(node.modifiers),
+    rawDecorators: describeNodeList(node.decorators),
+    legacyDecorators,
+    legacyModifiers,
+    children,
   };
 }
 
@@ -185,6 +219,12 @@ const report = {
   },
   nativeApiMode: "project-backed",
   kindAliasChanges,
+  nativeDecoratorUtilities: {
+    canHaveDecorators: typeof nativeAst.canHaveDecorators,
+    getDecorators: typeof nativeAst.getDecorators,
+    canHaveModifiers: typeof nativeAst.canHaveModifiers,
+    getModifiers: typeof nativeAst.getModifiers,
+  },
   stages: {
     raw: "Unmodified native SourceFile",
     diagnosticAdapter: "Adds legacy parseDiagnostics shape only",
