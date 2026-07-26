@@ -19,14 +19,19 @@ test("BOM evidence maps to the existing upstream tracker", () => {
   assert.match(evidence.bom, /Statement end \| `27`/);
 });
 
-test("diagnostic evidence is ready to use as an upstream issue draft", () => {
-  assert.equal(probe.capabilities.locatedSyntaxDiagnostics, false);
-  assert.match(evidence.diagnostics, /Before filing, search the current/);
-  assert.match(evidence.diagnostics, /Program\.getSyntacticDiagnostics/);
-  assert.match(evidence.diagnostics, /`code` \| `1110`/);
-  assert.match(evidence.diagnostics, /`start` \| `undefined`/);
-  assert.match(evidence.diagnostics, /`length` \| `undefined`/);
-  assert.match(evidence.diagnostics, /Downstream impact/);
+test("diagnostic evidence records the redesigned pos and end shape", () => {
+  assert.equal(probe.capabilities.locatedSyntaxDiagnostics, true);
+  assert.equal(probe.capabilities.legacyDiagnosticShape, false);
+  assert.equal(probe.capabilities.normalizedSyntaxDiagnostics, true);
+  assert.match(
+    evidence.diagnostics,
+    /issues\/4745#issuecomment-5081879077/,
+  );
+  assert.match(evidence.diagnostics, /Diagnostic interface was intentionally redesigned/);
+  assert.match(evidence.diagnostics, /`pos` \| `start`/);
+  assert.match(evidence.diagnostics, /`end` \| `start \+ length`/);
+  assert.match(evidence.diagnostics, /adapters\/native-diagnostic\.mjs/);
+  assert.match(evidence.diagnostics, /Location data: available/);
 });
 
 test("both upstream documents contain self-contained reproductions", () => {
