@@ -34,10 +34,18 @@ function isNode(value) {
   );
 }
 
+function translateKind(kind) {
+  const name = nativeAst.SyntaxKind[kind];
+  const translated = typeof name === "string" ? ts.SyntaxKind[name] : undefined;
+  return typeof translated === "number" ? translated : kind;
+}
+
 function summarizeError(error) {
   return {
     name: error?.name ?? "Error",
     message: String(error?.message ?? error),
+    lineNumber: error?.lineNumber ?? null,
+    column: error?.column ?? null,
     stack: String(error?.stack ?? "")
       .split("\n")
       .slice(0, 8),
@@ -94,11 +102,21 @@ function createDiagnosticOnlyAdapter(sourceFile, diagnostics, getSourceFile) {
   });
 }
 
-function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
+function createDeepAdapter(
+  sourceFile,
+  diagnostics,
+  getSourceFile,
+  { structural },
+) {
   const nodeCache = new WeakMap();
   const arrayCache = new WeakMap();
+  const rawByProxy = new WeakMap();
   let normalizedDiagnostics = [];
   let wrappedSourceFile;
+
+  function unwrap(value) {
+    return rawByProxy.get(value) ?? value;
+  }
 
   function wrapArray(array) {
     if (!array || typeof array !== "object") {
@@ -129,12 +147,13 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
                 callback.call(thisArg, wrap(item), index, proxy),
               );
           }
-          return value.bind(target);
+          return (...args) => value.apply(target, args.map(unwrap));
         }
         return isNode(value) ? wrap(value) : value;
       },
     });
     arrayCache.set(array, proxy);
+    rawByProxy.set(proxy, array);
     return proxy;
   }
 
@@ -248,17 +267,11 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
 
     const proxy = new Proxy(value, {
       get(target, property) {
+        if (property === "kind") {
+          return translateKind(target.kind);
+        }
         if (target === sourceFile && property === "parseDiagnostics") {
           return normalizedDiagnostics;
-        }
-        if (property === "getChildren") {
-          return () => getChildren(target);
-        }
-        if (property === "getFirstToken") {
-          return () => firstToken(target);
-        }
-        if (property === "getLastToken") {
-          return () => lastToken(target);
         }
         if (property === "getSourceFile") {
           return () => wrappedSourceFile;
@@ -274,11 +287,20 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
                 : undefined,
             );
         }
+        if (structural && property === "getChildren") {
+          return () => getChildren(target);
+        }
+        if (structural && property === "getFirstToken") {
+          return () => firstToken(target);
+        }
+        if (structural && property === "getLastToken") {
+          return () => lastToken(target);
+        }
 
         const result = Reflect.get(target, property, target);
         if (typeof result === "function") {
           return (...args) => {
-            const returned = result.apply(target, args);
+            const returned = result.apply(target, args.map(unwrap));
             return Array.isArray(returned) || isNode(returned)
               ? wrap(returned)
               : returned;
@@ -292,6 +314,7 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
     });
 
     nodeCache.set(value, proxy);
+    rawByProxy.set(proxy, value);
     if (value === sourceFile) {
       wrappedSourceFile = proxy;
     }
@@ -325,13 +348,28 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
     const diagnostics = project.program.getSyntacticDiagnostics(fileName);
 
     fixtureResults[fileName] = {
+      preflight: {
+        nativeKind: sourceFile.kind,
+        nativeKindName: nativeAst.SyntaxKind[sourceFile.kind] ?? null,
+        converterSourceFileKind: ts.SyntaxKind.SourceFile,
+        kindMatchesConverter: sourceFile.kind === ts.SyntaxKind.SourceFile,
+        translatedKind: translateKind(sourceFile.kind),
+      },
       raw: attemptConversion(sourceFile, fileName),
       diagnosticAdapter: attemptConversion(
         createDiagnosticOnlyAdapter(sourceFile, diagnostics, getSourceFile),
         fileName,
       ),
+      kindAdapter: attemptConversion(
+        createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
+          structural: false,
+        }),
+        fileName,
+      ),
       structuralAdapter: attemptConversion(
-        createStructuralAdapter(sourceFile, diagnostics, getSourceFile),
+        createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
+          structural: true,
+        }),
         fileName,
       ),
     };
@@ -350,8 +388,10 @@ const report = {
   stages: {
     raw: "Unmodified native SourceFile",
     diagnosticAdapter: "Adds legacy parseDiagnostics shape only",
+    kindAdapter:
+      "Adds diagnostic normalization and maps native SyntaxKind values to TypeScript 6 values",
     structuralAdapter:
-      "Adds diagnostic normalization, recursive node wrapping, child traversal, and scanner-backed token methods",
+      "Also adds recursive child wrapping, child traversal, and scanner-backed token methods",
   },
   fixtures: results,
 };
