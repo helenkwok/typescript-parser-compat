@@ -97,9 +97,7 @@ function createDiagnosticOnlyAdapter(sourceFile, diagnostics, getSourceFile) {
 function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
   const nodeCache = new WeakMap();
   const arrayCache = new WeakMap();
-  const normalizedDiagnostics = diagnostics.map((diagnostic) =>
-    normalizeNativeDiagnostic(diagnostic, (fileName) => wrap(getSourceFile(fileName))),
-  );
+  let normalizedDiagnostics = [];
   let wrappedSourceFile;
 
   function wrapArray(array) {
@@ -228,8 +226,7 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
 
   function firstToken(node) {
     const position = Math.min(node.getStart(sourceFile), Math.max(0, node.end - 1));
-    const token = nativeAst.getTokenAtPosition(sourceFile, position);
-    return wrap(token);
+    return wrap(nativeAst.getTokenAtPosition(sourceFile, position));
   }
 
   function lastToken(node) {
@@ -301,7 +298,11 @@ function createStructuralAdapter(sourceFile, diagnostics, getSourceFile) {
     return proxy;
   }
 
-  return wrap(sourceFile);
+  wrappedSourceFile = wrap(sourceFile);
+  normalizedDiagnostics = diagnostics.map((diagnostic) =>
+    normalizeNativeDiagnostic(diagnostic, (fileName) => wrap(getSourceFile(fileName))),
+  );
+  return wrappedSourceFile;
 }
 
 async function loadFixtures() {
