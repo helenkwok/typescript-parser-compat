@@ -47,6 +47,7 @@ test("typescript-estree API inventory is unique and source-pinned", () => {
         "module-members",
         "project-surface",
         "project-capability",
+        "project-diagnostic-shape",
       ].includes(requirement.probe.type),
     );
   }
@@ -81,11 +82,17 @@ test("inventory separates package-root, unstable, and project-backed APIs", () =
   assert.notEqual(node.availability.nativeProject.status, "not-applicable");
 });
 
-test("known native diagnostic location gap remains explicit", () => {
+test("native diagnostic locations are available through a shape adapter", () => {
   const diagnostics = byId("located-parse-diagnostics");
   assert.equal(diagnostics.availability.typescript6.status, "verified");
-  assert.equal(diagnostics.availability.nativeProject.status, "incompatible");
-  assert.equal(diagnostics.nativeClassification, "incompatible");
+  assert.equal(
+    diagnostics.availability.nativeProject.status,
+    "adapter-required",
+  );
+  assert.equal(diagnostics.nativeClassification, "adapter-required");
+  assert.equal(diagnostics.availability.nativeProject.located, true);
+  assert.equal(diagnostics.availability.nativeProject.legacy, false);
+  assert.equal(diagnostics.availability.nativeProject.normalized, true);
 });
 
 test("module-load Extension dependency is inventoried separately", () => {
