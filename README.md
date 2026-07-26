@@ -35,6 +35,19 @@ The TypeScript 6 reference suite currently exercises:
 
 Until the native preview exposes a direct source-text parser, a sentinel test verifies that no matching entry point has appeared unnoticed. When it does appear, CI will request a native adapter and the same contract will be run against it.
 
+## Project-backed native evidence
+
+`adapters/native-project.mjs` uses the experimental sync API and a virtual filesystem to load the same fixtures through a temporary `tsconfig` project. This lets the repository measure native AST behavior before a direct parser entry point is available.
+
+The project-backed adapter is deliberately reported separately because it:
+
+- requires starting the native API process;
+- requires a project and `tsconfig`;
+- cannot accept an isolated source string in the way `typescript-estree` requires;
+- therefore does not resolve the project-less parser blocker.
+
+The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent links, syntax diagnostics, and BOM alignment. Known discrepancies remain visible as sentinel tests so upstream fixes trigger a deliberate contract update.
+
 ## Capability matrix
 
 `contract/parser-capabilities.json` is the declarative source of truth. Every required capability identifies:
@@ -64,7 +77,7 @@ npm run report
 
 `npm run report` writes:
 
-- `compatibility-report.json`, containing package versions, detected APIs, summaries, and capability-by-capability evidence;
+- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, and project-backed native observations;
 - `STATUS.md`, a stable human-readable view that changes only when the capability state changes.
 
 The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions also publishes it in the job summary and compatibility artifact.
