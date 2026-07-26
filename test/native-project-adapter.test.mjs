@@ -26,9 +26,15 @@ test("project-backed native AST preserves ordinary source text and parent links"
   assert.equal(result.capabilities.parentLinksAndTraversal, true);
 });
 
-test("project-backed native API returns located syntax diagnostics", () => {
-  assert.equal(result.capabilities.locatedSyntaxDiagnostics, true);
-  assert.ok(result.observations.firstSyntaxDiagnostic);
+test("project-backed native diagnostic locations remain missing until fixed upstream", () => {
+  assert.equal(
+    result.capabilities.locatedSyntaxDiagnostics,
+    false,
+    "Diagnostic behavior changed: update the capability evidence if native syntactic diagnostics now expose start and length",
+  );
+  assert.equal(typeof result.observations.firstSyntaxDiagnostic?.code, "number");
+  assert.equal(result.observations.firstSyntaxDiagnostic?.start, undefined);
+  assert.equal(result.observations.firstSyntaxDiagnostic?.length, undefined);
 });
 
 test("project-backed native BOM mismatch remains visible until fixed upstream", () => {
