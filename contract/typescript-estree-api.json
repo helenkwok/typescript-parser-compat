@@ -133,9 +133,16 @@
       "id": "located-parse-diagnostics",
       "layer": "diagnostics",
       "required": true,
-      "requirement": "Expose syntax diagnostics with code, UTF-16 start, and positive length.",
-      "evidence": "ast-converter.ts reads SourceFile.parseDiagnostics and convert.ts converts errors using their start and file.",
-      "probe": { "type": "project-capability", "capability": "locatedSyntaxDiagnostics" }
+      "requirement": "Expose located syntax diagnostics and provide a compatibility mapping to the legacy TypeScript diagnostic shape used by typescript-estree.",
+      "evidence": "The native Diagnostic interface intentionally uses pos, end, text, and fileName; convert.ts currently expects start, length, messageText, and file. A mechanical adapter can map between the two shapes.",
+      "probe": {
+        "type": "project-diagnostic-shape",
+        "locatedCapability": "locatedSyntaxDiagnostics",
+        "legacyCapability": "legacyDiagnosticShape",
+        "normalizedCapability": "normalizedSyntaxDiagnostics",
+        "nativeFields": ["pos", "end", "text", "fileName"],
+        "legacyFields": ["start", "length", "messageText", "file"]
+      }
     }
   ]
 }
