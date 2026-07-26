@@ -14,6 +14,7 @@ import {
 import {
   createDeepAdapter,
   createDiagnosticOnlyAdapter,
+  syntheticTokenTelemetry,
   translateKind,
 } from "./native-estree-adapter.mjs";
 
@@ -268,6 +269,16 @@ const report = {
   },
   nativeApiMode: "project-backed",
   kindAliasChanges,
+  converterEnumValues: {
+    AtToken: ts.SyntaxKind.AtToken,
+    CaretEqualsToken: ts.SyntaxKind.CaretEqualsToken,
+    LastBinaryOperator: ts.SyntaxKind.LastBinaryOperator,
+    reverseLastBinaryOperator:
+      ts.SyntaxKind[ts.SyntaxKind.LastBinaryOperator] ?? null,
+  },
+  syntheticTokenTelemetry: syntheticTokenTelemetry.filter((item) =>
+    item.fileName.includes("decorator"),
+  ),
   nativeDecoratorUtilities: {
     canHaveDecorators: typeof nativeAst.canHaveDecorators,
     getDecorators: typeof nativeAst.getDecorators,
