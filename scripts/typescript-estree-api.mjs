@@ -72,6 +72,12 @@ function createTypeScript6ReferenceProbe(ts6) {
         typeof diagnostic?.start === "number" &&
         typeof diagnostic?.length === "number" &&
         diagnostic.length > 0,
+      legacyDiagnosticShape:
+        typeof diagnostic?.start === "number" &&
+        typeof diagnostic?.length === "number" &&
+        typeof diagnostic?.messageText !== "undefined" &&
+        typeof diagnostic?.file === "object",
+      normalizedSyntaxDiagnostics: true,
     },
   };
 }
@@ -143,6 +149,29 @@ function evaluateProjectProbe(projectProbe, probe) {
     };
   }
 
+  if (probe.type === "project-diagnostic-shape") {
+    const located =
+      projectProbe?.capabilities?.[probe.locatedCapability] === true;
+    const legacy = projectProbe?.capabilities?.[probe.legacyCapability] === true;
+    const normalized =
+      projectProbe?.capabilities?.[probe.normalizedCapability] === true;
+
+    return {
+      status: legacy
+        ? "verified"
+        : located && normalized
+          ? "adapter-required"
+          : located
+            ? "partial"
+            : "incompatible",
+      located,
+      legacy,
+      normalized,
+      nativeFields: probe.nativeFields,
+      legacyFields: probe.legacyFields,
+    };
+  }
+
   return { status: "not-applicable" };
 }
 
@@ -175,6 +204,9 @@ function classifyRequirement(requirement, roots, project) {
 
   if (project.status === "verified") {
     return "project-only";
+  }
+  if (project.status === "adapter-required") {
+    return "adapter-required";
   }
   if (project.status === "partial") {
     return "project-partial";
@@ -244,11 +276,15 @@ export function evaluateTypescriptEstreeApiInventory(
       projectOnly: required.filter(
         (item) => item.nativeClassification === "project-only",
       ).length,
+      adapterRequired: required.filter(
+        (item) => item.nativeClassification === "adapter-required",
+      ).length,
       incomplete: required.filter((item) =>
         [
           "root-partial",
           "unstable-partial",
           "project-partial",
+          "adapter-required",
           "incompatible",
           "missing",
         ].includes(item.nativeClassification),

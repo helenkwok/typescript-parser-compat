@@ -58,12 +58,16 @@ const report = {
       tracker: "https://github.com/microsoft/typescript-go/issues/4521",
       document: "upstream/bom-4521.md",
     },
-    locatedSyntaxDiagnostics: {
-      status: nativeProjectProbe.capabilities.locatedSyntaxDiagnostics
-        ? "resolved"
-        : "existing-tracker",
+    diagnosticShape: {
+      status:
+        nativeProjectProbe.capabilities.locatedSyntaxDiagnostics &&
+        nativeProjectProbe.capabilities.normalizedSyntaxDiagnostics
+          ? "adapter-required"
+          : "unresolved",
       tracker: "https://github.com/microsoft/typescript-go/issues/4745",
-      document: "upstream/diagnostic-locations-issue.md",
+      clarification:
+        "https://github.com/microsoft/typescript-go/issues/4745#issuecomment-5081879077",
+      document: "upstream/diagnostic-shape-4745.md",
     },
   },
 };
@@ -81,7 +85,7 @@ await Promise.all([
   writeFile("TYPESCRIPT-ESTREE-API.md", typescriptEstreeStatus),
   writeFile("upstream/bom-4521.md", upstreamDocuments.bom),
   writeFile(
-    "upstream/diagnostic-locations-issue.md",
+    "upstream/diagnostic-shape-4745.md",
     upstreamDocuments.diagnostics,
   ),
 ]);

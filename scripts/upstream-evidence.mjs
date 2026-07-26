@@ -48,9 +48,34 @@ const api = new API({
 
 try {
   const snapshot = api.updateSnapshot({ openProject: "/tsconfig.json" });
-  const program = snapshot.getProject("/tsconfig.json").program;
-  const diagnostic = program.getSyntacticDiagnostics("/input.ts")[0];
-  console.log({ code: diagnostic.code, start: diagnostic.start, length: diagnostic.length });
+  const project = snapshot.getProject("/tsconfig.json");
+  const diagnostic = project.program.getSyntacticDiagnostics("/input.ts")[0];
+  const sourceFile = project.program.getSourceFile(diagnostic.fileName);
+
+  const normalized = {
+    code: diagnostic.code,
+    start: diagnostic.pos,
+    length: diagnostic.end - diagnostic.pos,
+    messageText: diagnostic.text,
+    file: sourceFile,
+  };
+
+  console.log({
+    native: {
+      code: diagnostic.code,
+      pos: diagnostic.pos,
+      end: diagnostic.end,
+      text: diagnostic.text,
+      fileName: diagnostic.fileName,
+    },
+    normalized: {
+      code: normalized.code,
+      start: normalized.start,
+      length: normalized.length,
+      messageText: normalized.messageText,
+      fileName: normalized.file.fileName,
+    },
+  });
 } finally {
   api.close();
 }`;
@@ -108,15 +133,38 @@ ${bomReproduction}
 - Sentinel: \`test/native-project-adapter.test.mjs\`
 `;
 
-  const diagnosticsDocument = `# Issue draft: native API syntactic diagnostics omit source locations
+  const diagnosticsDocument = `# Diagnostic API shape clarification for microsoft/typescript-go#4745
 
-> Before filing, search the current \`microsoft/typescript-go\` issue tracker again to avoid a duplicate. No dedicated open or closed tracker was found by the repository search terms used when this draft was generated.
+The native API does expose source locations. The \`Diagnostic\` interface was intentionally redesigned to use \`pos\` and \`end\` rather than the legacy \`start\` and \`length\` fields.
 
-## Summary
+## Upstream clarification
 
-\`Program.getSyntacticDiagnostics(fileName)\` through \`@typescript/native-preview/unstable/sync\` returns a diagnostic code, but the first syntax diagnostic does not expose numeric \`start\` and \`length\` values.
+- Tracker: https://github.com/microsoft/typescript-go/issues/4745
+- Maintainer comment: https://github.com/microsoft/typescript-go/issues/4745#issuecomment-5081879077
 
-This prevents downstream parsers and linting tools from attaching syntax errors to the corresponding source range.
+The issue should not be treated as a missing-location bug. Downstream consumers need a compatibility adapter for the redesigned field names.
+
+## Native-to-legacy mapping
+
+| Native field | Legacy TypeScript field |
+|---|---|
+| \`pos\` | \`start\` |
+| \`end\` | \`start + length\` |
+| \`text\` | \`messageText\` |
+| \`fileName\` | resolve to \`file\` through the current program/source-file lookup |
+
+Equivalent mapping:
+
+\`\`\`js
+const normalized = {
+  code: diagnostic.code,
+  category: diagnostic.category,
+  start: diagnostic.pos,
+  length: diagnostic.end - diagnostic.pos,
+  messageText: diagnostic.text,
+  file: project.program.getSourceFile(diagnostic.fileName),
+};
+\`\`\`
 
 ## Reproduction
 
@@ -128,31 +176,30 @@ ${commonInstall}
 ${diagnosticsReproduction}
 \`\`\`
 
-## Expected
-
-The returned diagnostic should include:
-
-- a numeric \`code\`;
-- a numeric UTF-16 \`start\` offset;
-- a positive numeric \`length\`.
-
-This matches the parser-facing behavior of the TypeScript 6 \`SourceFile.parseDiagnostics\` API.
-
 ## Current native result
 
 | Property | Actual |
 |---|---:|
-| \`code\` | \`${show(diagnostic?.code)}\` |
-| \`start\` | \`${show(diagnostic?.start)}\` |
-| \`length\` | \`${show(diagnostic?.length)}\` |
+| \`code\` | \`${show(diagnostic?.raw.code)}\` |
+| \`pos\` | \`${show(diagnostic?.raw.pos)}\` |
+| \`end\` | \`${show(diagnostic?.raw.end)}\` |
+| \`text\` | \`${show(diagnostic?.raw.text)}\` |
+| \`fileName\` | \`${show(diagnostic?.raw.fileName)}\` |
+| normalized \`start\` | \`${show(diagnostic?.normalized.start)}\` |
+| normalized \`length\` | \`${show(diagnostic?.normalized.length)}\` |
+| normalized \`messageText\` | \`${show(diagnostic?.normalized.messageText)}\` |
 
-## Downstream impact
+## Compatibility conclusion
 
-A future project-less parser API intended for tools such as \`typescript-estree\` needs located syntax diagnostics. A code-only diagnostic is insufficient for ESLint parser errors, editor markers, source maps, and automated fixes.
+- Location data: available.
+- Legacy object shape: not provided directly.
+- Mechanical adapter: verified by \`adapters/native-diagnostic.mjs\`.
+- Project-less parser blocker: unchanged; diagnostics are currently obtained through a project-backed API.
 
 ## Executable source
 
 - Fixture: \`fixtures/invalid.ts\`
+- Adapter: \`adapters/native-diagnostic.mjs\`
 - Probe: \`scripts/native-project-probe.mjs\`
 - Sentinel: \`test/native-project-adapter.test.mjs\`
 `;

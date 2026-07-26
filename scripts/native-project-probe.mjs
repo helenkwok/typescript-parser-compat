@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
+import { normalizeNativeDiagnostic } from "../adapters/native-diagnostic.mjs";
 import { withNativeProject } from "../adapters/native-project.mjs";
 
 const fixtureNames = [
@@ -61,6 +62,9 @@ export async function runNativeProjectProbe() {
       "/fixtures/invalid.ts",
     );
     const firstDiagnostic = syntaxDiagnostics[0];
+    const normalizedDiagnostic = firstDiagnostic
+      ? normalizeNativeDiagnostic(firstDiagnostic, getSourceFile)
+      : null;
     const firstStatement = basic.statements[0];
     const bomStatement = bom.statements[0];
     const bomStart = bomStatement.getStart(bom);
@@ -93,9 +97,21 @@ export async function runNativeProjectProbe() {
         locatedSyntaxDiagnostics:
           syntaxDiagnostics.length > 0 &&
           typeof firstDiagnostic?.code === "number" &&
+          typeof firstDiagnostic?.pos === "number" &&
+          typeof firstDiagnostic?.end === "number" &&
+          firstDiagnostic.end >= firstDiagnostic.pos,
+        legacyDiagnosticShape:
           typeof firstDiagnostic?.start === "number" &&
           typeof firstDiagnostic?.length === "number" &&
-          firstDiagnostic.length > 0,
+          typeof firstDiagnostic?.messageText !== "undefined" &&
+          typeof firstDiagnostic?.file === "object",
+        normalizedSyntaxDiagnostics:
+          typeof normalizedDiagnostic?.code === "number" &&
+          typeof normalizedDiagnostic?.start === "number" &&
+          typeof normalizedDiagnostic?.length === "number" &&
+          normalizedDiagnostic.length >= 0 &&
+          typeof normalizedDiagnostic?.messageText === "string" &&
+          typeof normalizedDiagnostic?.file === "object",
         bomConsistency:
           bom.text === files["/fixtures/bom.ts"] &&
           bom.getFullText() === files["/fixtures/bom.ts"] &&
@@ -142,9 +158,24 @@ export async function runNativeProjectProbe() {
         },
         firstSyntaxDiagnostic: firstDiagnostic
           ? {
-              code: firstDiagnostic.code,
-              start: firstDiagnostic.start,
-              length: firstDiagnostic.length,
+              raw: {
+                code: firstDiagnostic.code,
+                category: firstDiagnostic.category,
+                fileName: firstDiagnostic.fileName,
+                pos: firstDiagnostic.pos,
+                end: firstDiagnostic.end,
+                text: firstDiagnostic.text,
+                start: firstDiagnostic.start,
+                length: firstDiagnostic.length,
+              },
+              normalized: {
+                code: normalizedDiagnostic.code,
+                category: normalizedDiagnostic.category,
+                fileName: normalizedDiagnostic.file?.fileName,
+                start: normalizedDiagnostic.start,
+                length: normalizedDiagnostic.length,
+                messageText: normalizedDiagnostic.messageText,
+              },
             }
           : null,
       },
