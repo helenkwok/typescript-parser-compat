@@ -24,6 +24,9 @@ test("committed compatibility status matches the executable contract", () => {
 
 test("human-readable status lists every capability", () => {
   for (const capability of capabilityMatrix.capabilities) {
-    assert.match(renderedStatus, new RegExp(`\\| \\`${capability.id}\\` \\|`));
+    assert.ok(
+      renderedStatus.includes(`| \`${capability.id}\` |`),
+      `STATUS.md is missing capability ${capability.id}`,
+    );
   }
 });
