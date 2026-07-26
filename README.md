@@ -56,13 +56,14 @@ The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent lin
 - token helpers such as `tokenToString`, `isToken`, and the scanner;
 - the `SourceFile` instance contract, including `parseDiagnostics` and location helpers;
 - the node instance contract, including parents, positions, traversal, child-token methods, and text methods;
-- located syntax diagnostics.
+- located syntax diagnostics and the mapping between native and legacy diagnostic shapes.
 
 The evaluator classifies each requirement as:
 
 - `root-ready`: available from the moving `typescript` package root;
 - `unstable-only`: available only from native unstable AST exports;
 - `project-only`: verified only on project-backed native AST objects;
+- `adapter-required`: the native API carries the required data under a redesigned shape that current `typescript-estree` code must normalize;
 - `*-partial`: only part of the required surface is present;
 - `incompatible`: the API exists but fails the required behavior;
 - `missing`: no usable required API was detected.
@@ -77,16 +78,16 @@ The main blocker remains the absence of a direct project-less source-text parser
 - [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API and is currently blocked by the external API.
 - [`MarkusNeusinger/kurrentschrift#228`](https://github.com/MarkusNeusinger/kurrentschrift/issues/228) records the downstream TypeScript 7 upgrade blocker that motivated this compatibility harness.
 - [`microsoft/typescript-go#4521`](https://github.com/microsoft/typescript-go/issues/4521) tracks BOM/source-text and node-offset misalignment.
-- [`microsoft/typescript-go#4745`](https://github.com/microsoft/typescript-go/issues/4745) tracks syntactic diagnostics that omit `start` and `length`.
+- [`microsoft/typescript-go#4745`](https://github.com/microsoft/typescript-go/issues/4745) records a corrected report: native diagnostics use `pos` and `end` rather than legacy `start` and `length`. The maintainer clarification is [issue comment 5081879077](https://github.com/microsoft/typescript-go/issues/4745#issuecomment-5081879077).
 
 Before opening another upstream issue, search for an existing tracker and prefer adding reproducible evidence to it.
 
 ## Upstream evidence
 
-`npm run report` converts failing native observations into issue-ready Markdown documents:
+`npm run report` converts native observations into reviewable Markdown documents:
 
 - `upstream/bom-4521.md` maps the BOM/source-offset mismatch to `microsoft/typescript-go#4521`;
-- `upstream/diagnostic-locations-issue.md` preserves the reproduction filed as `microsoft/typescript-go#4745`.
+- `upstream/diagnostic-shape-4745.md` records the intentional `pos`/`end` diagnostic interface and the verified compatibility adapter.
 
 The generated documents include installation commands, minimal reproductions, expected/actual results, downstream impact, and links back to the executable fixture and sentinel. They are included in every compatibility artifact.
 
@@ -122,7 +123,7 @@ npm run report
 - `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, the `typescript-estree` API inventory, project-backed native observations, and upstream evidence metadata;
 - `STATUS.md`, a stable human-readable view of the parser capability contract;
 - `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
-- `upstream/bom-4521.md` and `upstream/diagnostic-locations-issue.md`, generated upstream evidence documents.
+- `upstream/bom-4521.md` and `upstream/diagnostic-shape-4745.md`, generated upstream evidence documents.
 
 The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes both status reports in the job summary and compatibility artifact.
 
