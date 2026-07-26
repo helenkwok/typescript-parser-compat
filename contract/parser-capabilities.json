@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "contract": "projectless-source-text-parser",
+  "description": "Minimum file-level behavior required by JavaScript tooling that consumes a TypeScript-compatible AST.",
+  "capabilities": [
+    {
+      "id": "source-text-entry-point",
+      "category": "entry-point",
+      "requirement": "Parse an in-memory source string and filename without loading a project or tsconfig.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 parses source text without a project"
+      ],
+      "fixtures": [
+        "fixtures/basic.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-entry-point"
+      }
+    },
+    {
+      "id": "script-kind-selection",
+      "category": "syntax",
+      "requirement": "Select TS, TSX, JS, and JSX grammar independently for project-less source text.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 preserves TSX syntax and parent links",
+        "TypeScript 6 selects JavaScript syntax without a project",
+        "TypeScript 6 selects JSX syntax independently of TSX"
+      ],
+      "fixtures": [
+        "fixtures/basic.ts",
+        "fixtures/jsx.tsx",
+        "fixtures/plain.js",
+        "fixtures/jsx.jsx"
+      ],
+      "nativeProbe": {
+        "type": "parser-dependent"
+      }
+    },
+    {
+      "id": "source-text-and-offsets",
+      "category": "source-fidelity",
+      "requirement": "Preserve the complete source text and UTF-16 node offsets used by JavaScript tooling.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 parses source text without a project",
+        "TypeScript 6 preserves BOM text and UTF-16 offsets"
+      ],
+      "fixtures": [
+        "fixtures/basic.ts",
+        "fixtures/bom.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-dependent"
+      }
+    },
+    {
+      "id": "bom-consistency",
+      "category": "source-fidelity",
+      "requirement": "Keep BOM-inclusive source text aligned with node positions and text slicing.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 preserves BOM text and UTF-16 offsets"
+      ],
+      "fixtures": [
+        "fixtures/bom.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-dependent"
+      }
+    },
+    {
+      "id": "comments-and-token-scanning",
+      "category": "trivia",
+      "requirement": "Preserve comments and expose scanner-level token and trivia information.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 preserves comments and exposes comment trivia to the scanner"
+      ],
+      "fixtures": [
+        "fixtures/comments.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-plus-exports",
+        "exports": [
+          "createScanner"
+        ]
+      }
+    },
+    {
+      "id": "located-syntax-diagnostics",
+      "category": "diagnostics",
+      "requirement": "Return syntax diagnostics with numeric codes, UTF-16 start positions, and lengths.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 returns located syntax diagnostics"
+      ],
+      "fixtures": [
+        "fixtures/invalid.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-dependent"
+      }
+    },
+    {
+      "id": "parent-links-and-traversal",
+      "category": "ast",
+      "requirement": "Return a traversable AST with parent links and token-position navigation utilities.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 preserves TSX syntax and parent links",
+        "native preview exposes AST utility primitives"
+      ],
+      "fixtures": [
+        "fixtures/jsx.tsx"
+      ],
+      "nativeProbe": {
+        "type": "parser-plus-exports",
+        "exports": [
+          "visitNode",
+          "getTokenAtPosition"
+        ]
+      }
+    },
+    {
+      "id": "modern-typescript-syntax",
+      "category": "syntax",
+      "requirement": "Represent current TypeScript constructs, including satisfies expressions and decorators.",
+      "required": true,
+      "referenceTests": [
+        "TypeScript 6 parses source text without a project",
+        "TypeScript 6 parses decorator syntax"
+      ],
+      "fixtures": [
+        "fixtures/basic.ts",
+        "fixtures/decorators.ts"
+      ],
+      "nativeProbe": {
+        "type": "parser-dependent"
+      }
+    }
+  ]
+}
