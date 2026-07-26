@@ -7,10 +7,12 @@ import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "./capabilities.mjs";
+import { runNativeProjectProbe } from "./native-project-probe.mjs";
 import { renderCompatibilityStatus } from "./status.mjs";
 
 const contract = await loadCapabilityContract();
 const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
+const nativeProjectProbe = await runNativeProjectProbe();
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -29,6 +31,7 @@ const report = {
     },
   },
   capabilityMatrix,
+  nativeProjectProbe,
 };
 
 const jsonReport = `${JSON.stringify(report, null, 2)}\n`;
