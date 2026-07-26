@@ -37,5 +37,6 @@ jobs:
           path: |
             compatibility-report.json
             STATUS.md
+            upstream/*.md
             test-output.txt
           if-no-files-found: warn
