@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "inventory": "typescript-estree-projectless-parser-api",
+  "description": "Runtime TypeScript API needed to bootstrap the project-less typescript-estree parser and convert the returned AST. This inventory deliberately excludes the broader type-aware Program and TypeChecker surface.",
+  "upstream": {
+    "repository": "typescript-eslint/typescript-eslint",
+    "commit": "3b71948c6c5d6bbe0f96346b280fafaee467cc6b",
+    "sourceFiles": [
+      "packages/typescript-estree/src/create-program/createSourceFile.ts",
+      "packages/typescript-estree/src/create-program/getScriptKind.ts",
+      "packages/typescript-estree/src/create-program/shared.ts",
+      "packages/typescript-estree/src/parser.ts",
+      "packages/typescript-estree/src/ast-converter.ts",
+      "packages/typescript-estree/src/convert-comments.ts",
+      "packages/typescript-estree/src/convert.ts",
+      "packages/typescript-estree/src/node-utils.ts"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "create-source-file",
+      "layer": "bootstrap",
+      "required": true,
+      "requirement": "Parse an isolated in-memory source string into a SourceFile without a project.",
+      "evidence": "create-program/createSourceFile.ts calls ts.createSourceFile directly.",
+      "probe": { "type": "module-path", "path": "createSourceFile" }
+    },
+    {
+      "id": "script-target-latest",
+      "layer": "bootstrap",
+      "required": true,
+      "requirement": "Select the latest supported language grammar.",
+      "evidence": "create-program/createSourceFile.ts passes ts.ScriptTarget.Latest.",
+      "probe": { "type": "module-members", "path": "ScriptTarget", "members": ["Latest"] }
+    },
+    {
+      "id": "script-kind-selection",
+      "layer": "bootstrap",
+      "required": true,
+      "requirement": "Select JS, JSX, JSON, TS, and TSX parsing modes.",
+      "evidence": "create-program/getScriptKind.ts maps file extensions to ts.ScriptKind values.",
+      "probe": { "type": "module-members", "path": "ScriptKind", "members": ["JS", "JSON", "JSX", "TS", "TSX"] }
+    },
+    {
+      "id": "extension-enum",
+      "layer": "module-load",
+      "required": true,
+      "requirement": "Expose the extension constants evaluated while typescript-estree modules load.",
+      "evidence": "create-program/getScriptKind.ts and shared.ts read ts.Extension constants at module evaluation time.",
+      "probe": { "type": "module-members", "path": "Extension", "members": ["Cjs", "Cts", "Dcts", "Dmts", "Dts", "Js", "Json", "Jsx", "Mjs", "Mts", "Ts", "Tsx"] }
+    },
+    {
+      "id": "language-variant",
+      "layer": "tokens-comments",
+      "required": true,
+      "requirement": "Distinguish standard and JSX lexical variants.",
+      "evidence": "create-program/getScriptKind.ts returns ts.LanguageVariant.JSX or Standard.",
+      "probe": { "type": "module-members", "path": "LanguageVariant", "members": ["JSX", "Standard"] }
+    },
+    {
+      "id": "syntax-kind",
+      "layer": "conversion",
+      "required": true,
+      "requirement": "Expose SyntaxKind values used throughout AST conversion, token classification, and comments.",
+      "evidence": "convert.ts, convert-comments.ts, and node-utils.ts branch extensively on ts.SyntaxKind.",
+      "probe": { "type": "module-members", "path": "SyntaxKind", "members": ["SourceFile", "SingleLineCommentTrivia", "MultiLineCommentTrivia", "FirstToken", "LastToken", "FirstKeyword", "LastFutureReservedWord"] }
+    },
+    {
+      "id": "node-flags",
+      "layer": "conversion",
+      "required": true,
+      "requirement": "Expose declaration flags used to distinguish let, const, using, and await using.",
+      "evidence": "node-utils.ts reads ts.NodeFlags during variable-declaration conversion.",
+      "probe": { "type": "module-members", "path": "NodeFlags", "members": ["Let", "Const", "Using", "AwaitUsing"] }
+    },
+    {
+      "id": "token-to-string",
+      "layer": "tokens-comments",
+      "required": true,
+      "requirement": "Convert token kinds into source spellings.",
+      "evidence": "node-utils.ts calls ts.tokenToString for ESTree operators and tokens.",
+      "probe": { "type": "module-path", "path": "tokenToString" }
+    },
+    {
+      "id": "is-token",
+      "layer": "tokens-comments",
+      "required": true,
+      "requirement": "Identify token nodes while traversing the TypeScript AST.",
+      "evidence": "node-utils.ts calls ts.isToken in token-navigation logic.",
+      "probe": { "type": "module-path", "path": "isToken" }
+    },
+    {
+      "id": "scanner",
+      "layer": "tokens-comments",
+      "required": false,
+      "requirement": "Expose scanner primitives used by TypeScript-compatible comment and token helpers.",
+      "evidence": "Token and comment conversion depends on TypeScript-compatible lexical ranges; direct usage is delegated partly through ts-api-utils.",
+      "probe": { "type": "module-path", "path": "createScanner" }
+    },
+    {
+      "id": "sys-case-sensitivity",
+      "layer": "module-load",
+      "required": false,
+      "requirement": "Report filesystem case sensitivity when ts.sys is available.",
+      "evidence": "create-program/shared.ts reads ts.sys.useCaseSensitiveFileNames with a browser fallback.",
+      "probe": { "type": "module-path", "path": "sys.useCaseSensitiveFileNames" }
+    },
+    {
+      "id": "sys-create-hash",
+      "layer": "module-load",
+      "required": false,
+      "requirement": "Hash source content when ts.sys.createHash is available.",
+      "evidence": "create-program/shared.ts uses ts.sys.createHash conditionally.",
+      "probe": { "type": "module-path", "path": "sys.createHash" }
+    },
+    {
+      "id": "source-file-instance",
+      "layer": "ast-instance",
+      "required": true,
+      "requirement": "Return a SourceFile with text, file metadata, statements, parse diagnostics, and location helpers.",
+      "evidence": "ast-converter.ts reads parseDiagnostics; node-utils.ts uses getLineAndCharacterOfPosition; parser conversion consumes SourceFile text and statements.",
+      "probe": { "type": "project-surface", "target": "sourceFile", "members": ["text", "fileName", "scriptKind", "statements", "parseDiagnostics", "getFullText", "getLineAndCharacterOfPosition"] }
+    },
+    {
+      "id": "node-instance",
+      "layer": "ast-instance",
+      "required": true,
+      "requirement": "Return nodes with positions, parents, traversal, text, child-token, and source-file methods.",
+      "evidence": "convert.ts and node-utils.ts use kind, pos, end, parent, forEachChild, getSourceFile, getStart, getFullStart, getEnd, getChildren, getFirstToken, getLastToken, getFullText, and getText.",
+      "probe": { "type": "project-surface", "target": "node", "members": ["kind", "pos", "end", "parent", "forEachChild", "getSourceFile", "getStart", "getFullStart", "getEnd", "getChildren", "getFirstToken", "getLastToken", "getFullText", "getText"] }
+    },
+    {
+      "id": "located-parse-diagnostics",
+      "layer": "diagnostics",
+      "required": true,
+      "requirement": "Expose syntax diagnostics with code, UTF-16 start, and positive length.",
+      "evidence": "ast-converter.ts reads SourceFile.parseDiagnostics and convert.ts converts errors using their start and file.",
+      "probe": { "type": "project-capability", "capability": "locatedSyntaxDiagnostics" }
+    }
+  ]
+}
