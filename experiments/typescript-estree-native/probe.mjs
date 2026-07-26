@@ -9,6 +9,9 @@ import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
 import { withNativeProject } from "../../adapters/native-project.mjs";
 import {
+  canonicalizeNativeSyntaxKindReverseMap,
+} from "./canonical-kind-map.mjs";
+import {
   createDeepAdapter,
   createDiagnosticOnlyAdapter,
   translateKind,
@@ -27,6 +30,8 @@ const reportUrl = new URL(
   "../../typescript-estree-native-conversion.json",
   import.meta.url,
 );
+
+const kindAliasChanges = canonicalizeNativeSyntaxKindReverseMap();
 
 function summarizeError(error) {
   return {
@@ -177,11 +182,12 @@ const report = {
     converterTypeScript: ts.version,
   },
   nativeApiMode: "project-backed",
+  kindAliasChanges,
   stages: {
     raw: "Unmodified native SourceFile",
     diagnosticAdapter: "Adds legacy parseDiagnostics shape only",
     kindAdapter:
-      "Adds diagnostic normalization and maps native SyntaxKind values to TypeScript 6 values",
+      "Adds diagnostic normalization and maps canonical native SyntaxKind names to TypeScript 6 values",
     structuralAdapter:
       "Also adds recursive child wrapping, standard node range/child methods, and scanner-backed token methods",
     structuralStrict:
