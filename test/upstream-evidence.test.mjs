@@ -27,7 +27,10 @@ test("diagnostic evidence records the redesigned pos and end shape", () => {
     evidence.diagnostics,
     /issues\/4745#issuecomment-5081879077/,
   );
-  assert.match(evidence.diagnostics, /Diagnostic interface was intentionally redesigned/);
+  assert.match(
+    evidence.diagnostics,
+    /`Diagnostic` interface was intentionally redesigned/,
+  );
   assert.match(evidence.diagnostics, /`pos` \| `start`/);
   assert.match(evidence.diagnostics, /`end` \| `start \+ length`/);
   assert.match(evidence.diagnostics, /adapters\/native-diagnostic\.mjs/);
