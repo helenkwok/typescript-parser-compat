@@ -2,8 +2,7 @@ import ts from "typescript";
 import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
 import { normalizeNativeDiagnostic } from "../../adapters/native-diagnostic.mjs";
-
-export const syntheticTokenTelemetry = [];
+import { chooseCanonicalKindName } from "./canonical-kind-map.mjs";
 
 function isNode(value) {
   return (
@@ -16,7 +15,7 @@ function isNode(value) {
 }
 
 export function translateKind(kind) {
-  const name = nativeAst.SyntaxKind[kind];
+  const name = chooseCanonicalKindName(kind);
   const translated = typeof name === "string" ? ts.SyntaxKind[name] : undefined;
   return typeof translated === "number" ? translated : kind;
 }
@@ -143,28 +142,13 @@ export function createDeepAdapter(
   }
 
   function createSyntheticToken(kind, fullStart, start, end, parent) {
-    const text = sourceFile.text.slice(start, end);
-    syntheticTokenTelemetry.push({
-      fileName: sourceFile.fileName,
-      kind,
-      kindName: ts.SyntaxKind[kind] ?? String(kind),
-      fullStart,
-      start,
-      end,
-      text,
-      parentNativeKind: parent?.kind ?? null,
-      parentNativeKindName:
-        typeof parent?.kind === "number"
-          ? nativeAst.SyntaxKind[parent.kind] ?? String(parent.kind)
-          : null,
-    });
-
+    const wrappedParent = wrap(parent);
     const token = {
       kind,
       flags: 0,
       pos: fullStart,
       end,
-      parent,
+      parent: wrappedParent,
       getSourceFile: () => wrappedSourceFile,
       getFullStart: () => fullStart,
       getStart: () => start,
@@ -173,7 +157,7 @@ export function createDeepAdapter(
       getFullWidth: () => end - fullStart,
       getLeadingTriviaWidth: () => start - fullStart,
       getFullText: () => sourceFile.text.slice(fullStart, end),
-      getText: () => text,
+      getText: () => sourceFile.text.slice(start, end),
       getChildren: () => [],
       getChildCount: () => 0,
       getChildAt: () => undefined,
