@@ -65,7 +65,7 @@ function summarizeConversion(result) {
   };
 }
 
-function attemptConversion(sourceFile, fileName) {
+function attemptConversion(sourceFile, fileName, overrides = {}) {
   try {
     return summarizeConversion(
       parseAndGenerateServices(sourceFile, {
@@ -76,6 +76,7 @@ function attemptConversion(sourceFile, fileName) {
         comment: true,
         tokens: true,
         preserveNodeMaps: true,
+        ...overrides,
       }),
     );
   } catch (error) {
@@ -370,6 +371,12 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
   for (const fileName of Object.keys(files)) {
     const sourceFile = getSourceFile(fileName);
     const diagnostics = project.program.getSyntacticDiagnostics(fileName);
+    const structuralSourceFile = createDeepAdapter(
+      sourceFile,
+      diagnostics,
+      getSourceFile,
+      { structural: true },
+    );
 
     fixtureResults[fileName] = {
       preflight: {
@@ -390,12 +397,10 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
         }),
         fileName,
       ),
-      structuralAdapter: attemptConversion(
-        createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
-          structural: true,
-        }),
-        fileName,
-      ),
+      structuralAdapter: attemptConversion(structuralSourceFile, fileName),
+      structuralAllowInvalid: attemptConversion(structuralSourceFile, fileName, {
+        allowInvalidAST: true,
+      }),
     };
   }
 
@@ -416,6 +421,8 @@ const report = {
       "Adds diagnostic normalization and maps native SyntaxKind values to TypeScript 6 values",
     structuralAdapter:
       "Also adds recursive child wrapping, standard node range/child methods, and scanner-backed token methods",
+    structuralAllowInvalid:
+      "Uses the same structural adapter while disabling typescript-estree's additional AST validity checks",
   },
   fixtures: results,
 };
