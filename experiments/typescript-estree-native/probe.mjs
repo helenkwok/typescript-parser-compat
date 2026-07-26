@@ -32,6 +32,10 @@ const reportUrl = new URL(
   "../../typescript-estree-native-conversion.json",
   import.meta.url,
 );
+const packageRoot = new URL(
+  "./node_modules/@typescript-eslint/typescript-estree/dist/",
+  import.meta.url,
+);
 
 const kindAliasChanges = canonicalizeNativeSyntaxKindReverseMap();
 
@@ -152,6 +156,15 @@ function inspectDecoratorSurface(sourceFile) {
   return interesting;
 }
 
+async function readSnippet(fileName, start, end) {
+  const text = await readFile(new URL(fileName, packageRoot), "utf8");
+  const lines = text.split("\n");
+  return lines.slice(start - 1, end).map((line, index) => ({
+    line: start + index,
+    text: line,
+  }));
+}
+
 async function loadFixtures() {
   return Object.fromEntries(
     await Promise.all(
@@ -211,6 +224,15 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
   return fixtureResults;
 });
 
+const converterSnippets = {
+  checkSyntaxError222: await readSnippet("check-syntax-errors.js", 216, 226),
+  convert798: await readSnippet("convert.js", 792, 804),
+  convert2012: await readSnippet("convert.js", 2006, 2018),
+  convert2239: await readSnippet("convert.js", 2233, 2245),
+  convert2269: await readSnippet("convert.js", 2263, 2275),
+  convert2329: await readSnippet("convert.js", 2323, 2335),
+};
+
 const report = {
   generatedAt: new Date().toISOString(),
   packages: {
@@ -225,6 +247,7 @@ const report = {
     canHaveModifiers: typeof nativeAst.canHaveModifiers,
     getModifiers: typeof nativeAst.getModifiers,
   },
+  converterSnippets,
   stages: {
     raw: "Unmodified native SourceFile",
     diagnosticAdapter: "Adds legacy parseDiagnostics shape only",
