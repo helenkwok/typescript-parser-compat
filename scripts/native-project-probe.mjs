@@ -35,6 +35,10 @@ function collectKinds(sourceFile) {
   return kinds;
 }
 
+function isFunction(value) {
+  return typeof value === "function";
+}
+
 export async function runNativeProjectProbe() {
   const files = await loadFixtureFiles();
 
@@ -57,6 +61,7 @@ export async function runNativeProjectProbe() {
       "/fixtures/invalid.ts",
     );
     const firstDiagnostic = syntaxDiagnostics[0];
+    const firstStatement = basic.statements[0];
     const bomStatement = bom.statements[0];
     const bomStart = bomStatement.getStart(bom);
     const bomEnd = bomStatement.getEnd();
@@ -95,6 +100,35 @@ export async function runNativeProjectProbe() {
           bom.text === files["/fixtures/bom.ts"] &&
           bom.getFullText() === files["/fixtures/bom.ts"] &&
           bom.text.slice(bomStart, bomEnd) === expectedBomStatement,
+      },
+      apiSurface: {
+        sourceFile: {
+          text: typeof basic.text === "string",
+          fileName: typeof basic.fileName === "string",
+          scriptKind: typeof basic.scriptKind === "number",
+          statements: typeof basic.statements?.length === "number",
+          parseDiagnostics: typeof basic.parseDiagnostics?.length === "number",
+          getFullText: isFunction(basic.getFullText),
+          getLineAndCharacterOfPosition: isFunction(
+            basic.getLineAndCharacterOfPosition,
+          ),
+        },
+        node: {
+          kind: typeof firstStatement?.kind === "number",
+          pos: typeof firstStatement?.pos === "number",
+          end: typeof firstStatement?.end === "number",
+          parent: typeof firstStatement?.parent === "object",
+          forEachChild: isFunction(firstStatement?.forEachChild),
+          getSourceFile: isFunction(firstStatement?.getSourceFile),
+          getStart: isFunction(firstStatement?.getStart),
+          getFullStart: isFunction(firstStatement?.getFullStart),
+          getEnd: isFunction(firstStatement?.getEnd),
+          getChildren: isFunction(firstStatement?.getChildren),
+          getFirstToken: isFunction(firstStatement?.getFirstToken),
+          getLastToken: isFunction(firstStatement?.getLastToken),
+          getFullText: isFunction(firstStatement?.getFullText),
+          getText: isFunction(firstStatement?.getText),
+        },
       },
       observations: {
         bom: {
