@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 
 import {
@@ -8,17 +9,14 @@ import ts from "typescript";
 import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
 import { withNativeProject } from "../../adapters/native-project.mjs";
-import {
-  canonicalizeNativeSyntaxKindReverseMap,
-} from "./canonical-kind-map.mjs";
+import { listCanonicalKindAliasChanges } from "./canonical-kind-map.mjs";
 import {
   createDeepAdapter,
   createDiagnosticOnlyAdapter,
-  syntheticTokenTelemetry,
   translateKind,
 } from "./native-estree-adapter.mjs";
 
-const fixtureNames = [
+const validFixtureNames = [
   "plain.js",
   "jsx.jsx",
   "comments.ts",
@@ -26,19 +24,18 @@ const fixtureNames = [
   "decorator-simple.ts",
   "generic-constructor.ts",
   "decorators.ts",
-  "invalid.ts",
 ];
+const invalidFixtureName = "invalid.ts";
+const fixtureNames = [...validFixtureNames, invalidFixtureName];
 
-const reportUrl = new URL(
+const jsonReportUrl = new URL(
   "../../typescript-estree-native-conversion.json",
   import.meta.url,
 );
-const packageRoot = new URL(
-  "./node_modules/@typescript-eslint/typescript-estree/dist/",
+const markdownReportUrl = new URL(
+  "../../TYPESCRIPT-ESTREE-CONVERSION.md",
   import.meta.url,
 );
-
-const kindAliasChanges = canonicalizeNativeSyntaxKindReverseMap();
 
 function summarizeError(error) {
   return {
@@ -46,13 +43,10 @@ function summarizeError(error) {
     message: String(error?.message ?? error),
     lineNumber: error?.lineNumber ?? null,
     column: error?.column ?? null,
-    stack: String(error?.stack ?? "")
-      .split("\n")
-      .slice(0, 8),
   };
 }
 
-function attemptConversion(sourceFile, fileName, overrides = {}) {
+function attemptConversion(sourceFile, fileName) {
   try {
     const result = parseAndGenerateServices(sourceFile, {
       filePath: fileName,
@@ -62,7 +56,7 @@ function attemptConversion(sourceFile, fileName, overrides = {}) {
       comment: true,
       tokens: true,
       preserveNodeMaps: true,
-      ...overrides,
+      errorOnUnknownASTType: true,
     });
     return {
       success: true,
@@ -79,119 +73,6 @@ function attemptConversion(sourceFile, fileName, overrides = {}) {
   }
 }
 
-function describeKind(node) {
-  if (!node || typeof node.kind !== "number") {
-    return null;
-  }
-  const nativeKindName = nativeAst.SyntaxKind[node.kind] ?? String(node.kind);
-  const mappedByName = ts.SyntaxKind[nativeKindName];
-  const translatedKind = translateKind(node.kind);
-  return {
-    nativeKind: node.kind,
-    nativeKindName,
-    mappedByName: typeof mappedByName === "number" ? mappedByName : null,
-    translatedKind,
-    translatedKindName: ts.SyntaxKind[translatedKind] ?? String(translatedKind),
-    text: node.text ?? null,
-  };
-}
-
-function describeNodeList(nodes) {
-  return nodes ? Array.from(nodes, describeKind) : null;
-}
-
-function describeNode(node) {
-  const children = [];
-  node.forEachChild(
-    (child) => {
-      children.push(describeKind(child));
-      return undefined;
-    },
-    (list) => {
-      for (const child of list) {
-        children.push(describeKind(child));
-      }
-      return undefined;
-    },
-  );
-
-  let legacyDecorators;
-  let legacyModifiers;
-  try {
-    legacyDecorators = ts.canHaveDecorators(node)
-      ? describeNodeList(ts.getDecorators(node))
-      : null;
-  } catch (error) {
-    legacyDecorators = { error: String(error?.message ?? error) };
-  }
-  try {
-    legacyModifiers = ts.canHaveModifiers(node)
-      ? describeNodeList(ts.getModifiers(node))
-      : null;
-  } catch (error) {
-    legacyModifiers = { error: String(error?.message ?? error) };
-  }
-
-  return {
-    ...describeKind(node),
-    keys: Object.keys(node).sort(),
-    name: describeKind(node.name),
-    expression: describeKind(node.expression),
-    rawModifiers: describeNodeList(node.modifiers),
-    rawDecorators: describeNodeList(node.decorators),
-    legacyDecorators,
-    legacyModifiers,
-    children,
-  };
-}
-
-function inspectKindTranslations(sourceFile) {
-  const byNativeKind = new Map();
-  const visit = (node) => {
-    if (!byNativeKind.has(node.kind)) {
-      byNativeKind.set(node.kind, describeKind(node));
-    }
-    node.forEachChild(visit);
-  };
-  visit(sourceFile);
-  const all = [...byNativeKind.values()].sort(
-    (left, right) => left.nativeKind - right.nativeKind,
-  );
-  return {
-    all,
-    unsupported: all.filter((item) => item.mappedByName == null),
-    collisions: all.filter(
-      (item) =>
-        item.mappedByName == null &&
-        typeof ts.SyntaxKind[item.translatedKind] === "string",
-    ),
-  };
-}
-
-function inspectDecoratorSurface(sourceFile) {
-  const interesting = [];
-  const visit = (node) => {
-    const name = nativeAst.SyntaxKind[node.kind];
-    if (
-      ["Decorator", "ClassDeclaration", "PropertyDeclaration"].includes(name)
-    ) {
-      interesting.push(describeNode(node));
-    }
-    node.forEachChild(visit);
-  };
-  visit(sourceFile);
-  return interesting;
-}
-
-async function readSnippet(fileName, start, end) {
-  const text = await readFile(new URL(fileName, packageRoot), "utf8");
-  const lines = text.split("\n");
-  return lines.slice(start - 1, end).map((line, index) => ({
-    line: start + index,
-    text: line,
-  }));
-}
-
 async function loadFixtures() {
   return Object.fromEntries(
     await Promise.all(
@@ -204,62 +85,55 @@ async function loadFixtures() {
 }
 
 const files = await loadFixtures();
-const results = withNativeProject(files, ({ project, getSourceFile }) => {
-  const fixtureResults = {};
+const fixtures = withNativeProject(files, ({ project, getSourceFile }) => {
+  return Object.fromEntries(
+    Object.keys(files).map((fileName) => {
+      const sourceFile = getSourceFile(fileName);
+      const diagnostics = project.program.getSyntacticDiagnostics(fileName);
+      const structuralSourceFile = createDeepAdapter(
+        sourceFile,
+        diagnostics,
+        getSourceFile,
+        { structural: true },
+      );
 
-  for (const fileName of Object.keys(files)) {
-    const sourceFile = getSourceFile(fileName);
-    const diagnostics = project.program.getSyntacticDiagnostics(fileName);
-    const structural = () =>
-      createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
-        structural: true,
-      });
-
-    fixtureResults[fileName] = {
-      preflight: {
-        nativeKind: sourceFile.kind,
-        nativeKindName: nativeAst.SyntaxKind[sourceFile.kind] ?? null,
-        converterSourceFileKind: ts.SyntaxKind.SourceFile,
-        kindMatchesConverter: sourceFile.kind === ts.SyntaxKind.SourceFile,
-        translatedKind: translateKind(sourceFile.kind),
-        kindTranslations: inspectKindTranslations(sourceFile),
-        decoratorSurface:
-          fileName.includes("decorator")
-            ? inspectDecoratorSurface(sourceFile)
-            : undefined,
-      },
-      raw: attemptConversion(sourceFile, fileName),
-      diagnosticAdapter: attemptConversion(
-        createDiagnosticOnlyAdapter(sourceFile, diagnostics, getSourceFile),
+      return [
         fileName,
-      ),
-      kindAdapter: attemptConversion(
-        createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
-          structural: false,
-        }),
-        fileName,
-      ),
-      structuralAdapter: attemptConversion(structural(), fileName),
-      structuralStrict: attemptConversion(structural(), fileName, {
-        errorOnUnknownASTType: true,
-      }),
-      structuralAllowInvalid: attemptConversion(structural(), fileName, {
-        allowInvalidAST: true,
-      }),
-    };
-  }
-
-  return fixtureResults;
+        {
+          preflight: {
+            nativeSourceFileKind: sourceFile.kind,
+            nativeSourceFileKindName:
+              nativeAst.SyntaxKind[sourceFile.kind] ?? null,
+            converterSourceFileKind: ts.SyntaxKind.SourceFile,
+            translatedSourceFileKind: translateKind(sourceFile.kind),
+          },
+          raw: attemptConversion(sourceFile, fileName),
+          diagnosticOnly: attemptConversion(
+            createDiagnosticOnlyAdapter(
+              sourceFile,
+              diagnostics,
+              getSourceFile,
+            ),
+            fileName,
+          ),
+          kindOnly: attemptConversion(
+            createDeepAdapter(sourceFile, diagnostics, getSourceFile, {
+              structural: false,
+            }),
+            fileName,
+          ),
+          structural: attemptConversion(structuralSourceFile, fileName),
+        },
+      ];
+    }),
+  );
 });
 
-const converterSnippets = {
-  checkSyntaxError222: await readSnippet("check-syntax-errors.js", 216, 226),
-  convert798: await readSnippet("convert.js", 792, 804),
-  convert2012: await readSnippet("convert.js", 2006, 2018),
-  convert2239: await readSnippet("convert.js", 2233, 2245),
-  convert2269: await readSnippet("convert.js", 2263, 2275),
-  convert2329: await readSnippet("convert.js", 2323, 2335),
-};
+const validPaths = validFixtureNames.map((name) => `/fixtures/${name}`);
+const invalidPath = `/fixtures/${invalidFixtureName}`;
+const validStructural = validPaths.filter(
+  (fileName) => fixtures[fileName].structural.success,
+);
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -268,38 +142,108 @@ const report = {
     converterTypeScript: ts.version,
   },
   nativeApiMode: "project-backed",
-  kindAliasChanges,
-  converterEnumValues: {
-    AtToken: ts.SyntaxKind.AtToken,
-    CaretEqualsToken: ts.SyntaxKind.CaretEqualsToken,
-    LastBinaryOperator: ts.SyntaxKind.LastBinaryOperator,
-    reverseLastBinaryOperator:
-      ts.SyntaxKind[ts.SyntaxKind.LastBinaryOperator] ?? null,
+  summary: {
+    validFixtures: validPaths.length,
+    validStructuralConversions: validStructural.length,
+    invalidFixtureProducesLocatedError:
+      fixtures[invalidPath].structural.success === false &&
+      fixtures[invalidPath].structural.error?.name === "TSError" &&
+      typeof fixtures[invalidPath].structural.error?.lineNumber === "number" &&
+      typeof fixtures[invalidPath].structural.error?.column === "number",
+    projectLessParserAvailable: false,
   },
-  syntheticTokenTelemetry: syntheticTokenTelemetry.filter((item) =>
-    item.fileName.includes("decorator"),
-  ),
-  nativeDecoratorUtilities: {
-    canHaveDecorators: typeof nativeAst.canHaveDecorators,
-    getDecorators: typeof nativeAst.getDecorators,
-    canHaveModifiers: typeof nativeAst.canHaveModifiers,
-    getModifiers: typeof nativeAst.getModifiers,
-  },
-  converterSnippets,
-  stages: {
-    raw: "Unmodified native SourceFile",
-    diagnosticAdapter: "Adds legacy parseDiagnostics shape only",
-    kindAdapter:
-      "Adds diagnostic normalization and maps canonical native SyntaxKind names to TypeScript 6 values",
-    structuralAdapter:
-      "Also adds recursive child wrapping, standard node range/child methods, and scanner-backed token methods",
-    structuralStrict:
-      "Uses the structural adapter and asks typescript-estree to reject unknown AST node kinds",
-    structuralAllowInvalid:
-      "Uses the structural adapter while disabling typescript-estree's additional AST validity checks",
-  },
-  fixtures: results,
+  adapterRequirements: [
+    "Normalize native diagnostics from pos/end/text/fileName to the legacy TypeScript diagnostic shape.",
+    "Translate native SyntaxKind values by canonical enum name rather than numeric identity.",
+    "Recursively wrap SourceFile, nodes, NodeArrays, and array helper results.",
+    "Provide legacy node range, child, and token methods expected by typescript-estree.",
+    "Synthesize token children with the TypeScript 6 scanner where native nodes do not expose them.",
+  ],
+  kindAliasChanges: listCanonicalKindAliasChanges(),
+  fixtures,
 };
 
-await writeFile(reportUrl, `${JSON.stringify(report, null, 2)}\n`);
+function outcome(result) {
+  if (result.success) {
+    return `pass (${result.tokenCount} tokens, ${result.commentCount} comments)`;
+  }
+  return `fail: ${result.error?.message ?? "unknown error"}`;
+}
+
+const rows = Object.entries(fixtures).map(
+  ([fileName, result]) =>
+    `| \`${fileName.replace("/fixtures/", "")}\` | ${outcome(result.raw)} | ${outcome(result.diagnosticOnly)} | ${outcome(result.kindOnly)} | ${outcome(result.structural)} |`,
+);
+
+const markdown = `${[
+  "# Native AST to typescript-estree Conversion",
+  "",
+  "> Generated by the isolated conversion experiment. The experiment uses the published `@typescript-eslint/typescript-estree` converter with its TypeScript 6 peer and a project-backed TypeScript native AST.",
+  "",
+  "## Result",
+  "",
+  `- Valid fixtures converted strictly: **${validStructural.length}/${validPaths.length}**`,
+  `- Malformed source returned a located parser error: **${report.summary.invalidFixtureProducesLocatedError ? "yes" : "no"}**`,
+  "- Direct project-less native parser available: **no**",
+  "",
+  "The actual ESTree converter accepts the native AST after mechanical compatibility adapters. This demonstrates structural compatibility; it does not remove the requirement for a direct isolated source-text parser.",
+  "",
+  "## Staged evidence",
+  "",
+  "| Fixture | Raw native | Diagnostic only | Kind translation | Full structural adapter |",
+  "|---|---|---|---|---|",
+  ...rows,
+  "",
+  "## Required adapters",
+  "",
+  ...report.adapterRequirements.map((item) => `- ${item}`),
+  "",
+  "The complete machine-readable stage results are in `typescript-estree-native-conversion.json`.",
+].join("\n")}\n`;
+
+await Promise.all([
+  writeFile(jsonReportUrl, `${JSON.stringify(report, null, 2)}\n`),
+  writeFile(markdownReportUrl, markdown),
+]);
+
+for (const fileName of validPaths) {
+  const fixture = fixtures[fileName];
+  assert.notEqual(
+    fixture.preflight.nativeSourceFileKind,
+    fixture.preflight.converterSourceFileKind,
+    `${fileName}: native and TypeScript 6 SourceFile numeric kinds unexpectedly match`,
+  );
+  assert.equal(
+    fixture.preflight.translatedSourceFileKind,
+    fixture.preflight.converterSourceFileKind,
+    `${fileName}: SourceFile kind translation failed`,
+  );
+  assert.equal(fixture.raw.success, false, `${fileName}: raw stage changed`);
+  assert.equal(
+    fixture.diagnosticOnly.success,
+    false,
+    `${fileName}: diagnostic-only stage changed`,
+  );
+  assert.equal(fixture.kindOnly.success, false, `${fileName}: kind-only stage changed`);
+  assert.match(
+    fixture.kindOnly.error?.message ?? "",
+    /getChildren is not a function/,
+    `${fileName}: kind-only failure moved to a different boundary`,
+  );
+  assert.equal(
+    fixture.structural.success,
+    true,
+    `${fileName}: structural conversion failed`,
+  );
+  assert.equal(fixture.structural.astType, "Program");
+  assert.equal(fixture.structural.hasNodeMaps, true);
+}
+
+const invalid = fixtures[invalidPath].structural;
+assert.equal(invalid.success, false);
+assert.equal(invalid.error?.name, "TSError");
+assert.equal(invalid.error?.message, "Type expected.");
+assert.equal(invalid.error?.lineNumber, 1);
+assert.equal(invalid.error?.column, 21);
+
 console.log(JSON.stringify(report, null, 2));
