@@ -3,6 +3,8 @@ import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
 import { normalizeNativeDiagnostic } from "../../adapters/native-diagnostic.mjs";
 
+export const syntheticTokenTelemetry = [];
+
 function isNode(value) {
   return (
     value != null &&
@@ -95,6 +97,22 @@ export function createDeepAdapter(
   }
 
   function createSyntheticToken(kind, fullStart, start, end, parent) {
+    const text = sourceFile.text.slice(start, end);
+    syntheticTokenTelemetry.push({
+      fileName: sourceFile.fileName,
+      kind,
+      kindName: ts.SyntaxKind[kind] ?? String(kind),
+      fullStart,
+      start,
+      end,
+      text,
+      parentNativeKind: parent?.kind ?? null,
+      parentNativeKindName:
+        typeof parent?.kind === "number"
+          ? nativeAst.SyntaxKind[parent.kind] ?? String(parent.kind)
+          : null,
+    });
+
     const token = {
       kind,
       flags: 0,
@@ -109,7 +127,7 @@ export function createDeepAdapter(
       getFullWidth: () => end - fullStart,
       getLeadingTriviaWidth: () => start - fullStart,
       getFullText: () => sourceFile.text.slice(fullStart, end),
-      getText: () => sourceFile.text.slice(start, end),
+      getText: () => text,
       getChildren: () => [],
       getChildCount: () => 0,
       getChildAt: () => undefined,
@@ -148,7 +166,7 @@ export function createDeepAdapter(
         break;
       }
       tokens.push(
-        createSyntheticToken(kind, fullStart, tokenStart, tokenEnd, wrap(parent)),
+        createSyntheticToken(kind, fullStart, tokenStart, tokenEnd, parent),
       );
     }
     return tokens;
