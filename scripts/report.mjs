@@ -7,6 +7,7 @@ import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "./capabilities.mjs";
+import { renderCompatibilityStatus } from "./status.mjs";
 
 const contract = await loadCapabilityContract();
 const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
@@ -30,8 +31,12 @@ const report = {
   capabilityMatrix,
 };
 
-await writeFile(
-  "compatibility-report.json",
-  `${JSON.stringify(report, null, 2)}\n`,
-);
-console.log(JSON.stringify(report, null, 2));
+const jsonReport = `${JSON.stringify(report, null, 2)}\n`;
+const markdownStatus = renderCompatibilityStatus(report);
+
+await Promise.all([
+  writeFile("compatibility-report.json", jsonReport),
+  writeFile("STATUS.md", markdownStatus),
+]);
+
+console.log(jsonReport);

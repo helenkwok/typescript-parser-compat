@@ -98,11 +98,14 @@ test("TypeScript 6 preserves comments and exposes comment trivia to the scanner"
   let token;
   do {
     token = scanner.scan();
-    kinds.push(ts6.SyntaxKind[token]);
+    kinds.push(token);
   } while (token !== ts6.SyntaxKind.EndOfFileToken);
 
-  assert.equal(kinds.filter((kind) => kind === "SingleLineCommentTrivia").length, 2);
-  assert.ok(kinds.includes("MultiLineCommentTrivia"));
+  assert.equal(
+    kinds.filter((kind) => kind === ts6.SyntaxKind.SingleLineCommentTrivia).length,
+    2,
+  );
+  assert.ok(kinds.includes(ts6.SyntaxKind.MultiLineCommentTrivia));
 });
 
 test("TypeScript 6 returns located syntax diagnostics", () => {
