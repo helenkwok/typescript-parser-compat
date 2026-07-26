@@ -9,11 +9,26 @@ import {
 } from "./capabilities.mjs";
 import { runNativeProjectProbe } from "./native-project-probe.mjs";
 import { renderCompatibilityStatus } from "./status.mjs";
+import {
+  evaluateTypescriptEstreeApiInventory,
+  loadTypescriptEstreeApiInventory,
+} from "./typescript-estree-api.mjs";
+import { renderTypescriptEstreeApiStatus } from "./typescript-estree-status.mjs";
 import { renderUpstreamEvidence } from "./upstream-evidence.mjs";
 
 const contract = await loadCapabilityContract();
 const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
 const nativeProjectProbe = await runNativeProjectProbe();
+const typescriptEstreeContract = await loadTypescriptEstreeApiInventory();
+const typescriptEstreeApi = evaluateTypescriptEstreeApiInventory(
+  typescriptEstreeContract,
+  {
+    ts6,
+    tsNext,
+    nativeAst,
+    nativeProjectProbe,
+  },
+);
 const upstreamDocuments = renderUpstreamEvidence(nativeProjectProbe);
 
 const report = {
@@ -33,6 +48,7 @@ const report = {
     },
   },
   capabilityMatrix,
+  typescriptEstreeApi,
   nativeProjectProbe,
   upstreamEvidence: {
     bomConsistency: {
@@ -45,7 +61,8 @@ const report = {
     locatedSyntaxDiagnostics: {
       status: nativeProjectProbe.capabilities.locatedSyntaxDiagnostics
         ? "resolved"
-        : "issue-draft",
+        : "existing-tracker",
+      tracker: "https://github.com/microsoft/typescript-go/issues/4745",
       document: "upstream/diagnostic-locations-issue.md",
     },
   },
@@ -53,11 +70,15 @@ const report = {
 
 const jsonReport = `${JSON.stringify(report, null, 2)}\n`;
 const markdownStatus = renderCompatibilityStatus(report);
+const typescriptEstreeStatus = renderTypescriptEstreeApiStatus(
+  typescriptEstreeApi,
+);
 
 await mkdir("upstream", { recursive: true });
 await Promise.all([
   writeFile("compatibility-report.json", jsonReport),
   writeFile("STATUS.md", markdownStatus),
+  writeFile("TYPESCRIPT-ESTREE-API.md", typescriptEstreeStatus),
   writeFile("upstream/bom-4521.md", upstreamDocuments.bom),
   writeFile(
     "upstream/diagnostic-locations-issue.md",

@@ -30,6 +30,10 @@ jobs:
           if [ -f STATUS.md ]; then
             cat STATUS.md >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f TYPESCRIPT-ESTREE-API.md ]; then
+            printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
+            cat TYPESCRIPT-ESTREE-API.md >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -37,6 +41,7 @@ jobs:
           path: |
             compatibility-report.json
             STATUS.md
+            TYPESCRIPT-ESTREE-API.md
             upstream/*.md
             test-output.txt
           if-no-files-found: warn
