@@ -1,0 +1,12 @@
+{
+  "name": "typescript-estree-native-conversion-experiment",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "probe": "node probe.mjs"
+  },
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "8.65.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

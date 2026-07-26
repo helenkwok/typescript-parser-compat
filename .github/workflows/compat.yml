@@ -16,6 +16,13 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Install typescript-estree conversion experiment
+        run: npm install --prefix experiments/typescript-estree-native
+      - name: Run native AST conversion experiment
+        shell: bash
+        run: |
+          set -o pipefail
+          npm --prefix experiments/typescript-estree-native run probe 2>&1 | tee typescript-estree-native-conversion-output.txt
       - name: Run tests
         shell: bash
         run: |
@@ -42,6 +49,8 @@ jobs:
             compatibility-report.json
             STATUS.md
             TYPESCRIPT-ESTREE-API.md
+            typescript-estree-native-conversion.json
+            typescript-estree-native-conversion-output.txt
             upstream/*.md
             test-output.txt
           if-no-files-found: warn
