@@ -13,6 +13,15 @@ The native preview does not expose a direct project-less source-text parser. Sca
 - Native capabilities ready: **0/8**
 - Native status distribution: **partial: 2, blocked: 5, missing: 1**
 
+## Project-backed native evidence
+
+The unstable sync API can load the same fixtures through a virtual `tsconfig` project. This is useful implementation evidence, but it does **not** satisfy the project-less parser requirement used by `typescript-estree`.
+
+- Behaviors passing through a native project: **7** (`basicAst`, `tsxAst`, `javascriptAst`, `jsxAst`, `modernSyntax`, `sourceTextPreserved`, `parentLinksAndTraversal`)
+- Behaviors currently failing through a native project: **2** (`locatedSyntaxDiagnostics`, `bomConsistency`)
+- Requires a project: **yes**
+- Requires a tsconfig: **yes**
+
 ## Capability matrix
 
 | Native status | Capability | Category | Requirement | Evidence |
