@@ -33,6 +33,25 @@ The TypeScript 6 reference suite currently exercises:
 
 Until the native preview exposes a direct source-text parser, a sentinel test verifies that no matching entry point has appeared unnoticed. When it does appear, CI will request a native adapter and the same contract will be run against it.
 
+## Capability matrix
+
+`contract/parser-capabilities.json` is the declarative source of truth. Every required capability identifies:
+
+- the behavior tooling needs;
+- the TypeScript 6 tests that prove the reference behavior;
+- the fixtures used by those tests;
+- the native API probe used to classify current support.
+
+CI validates that every referenced test and fixture exists. The generated report classifies native support as:
+
+- `missing`: the core API entry point is absent;
+- `blocked`: the capability cannot be tested until the parser exists;
+- `partial`: useful native utilities exist, but no complete file parser is available;
+- `unverified`: a candidate API exists and needs the full adapter contract;
+- `ready`: the capability has passed the native compatibility contract.
+
+This separation makes it clear that utilities such as the scanner and AST navigation are already useful without implying that the JavaScript parser blocker has been resolved.
+
 ## Run locally
 
 ```bash
@@ -41,7 +60,7 @@ npm test
 npm run report
 ```
 
-`npm run report` writes `compatibility-report.json` with package versions, detected native API capabilities, and reference-fixture coverage.
+`npm run report` writes `compatibility-report.json` with package versions, detected APIs, a capability summary, and capability-by-capability native evidence.
 
 ## Package roles
 
