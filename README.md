@@ -48,6 +48,15 @@ The project-backed adapter is deliberately reported separately because it:
 
 The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent links, syntax diagnostics, and BOM alignment. Known discrepancies remain visible as sentinel tests so upstream fixes trigger a deliberate contract update.
 
+## Upstream evidence
+
+`npm run report` converts failing native observations into issue-ready Markdown documents:
+
+- `upstream/bom-4521.md` maps the BOM/source-offset mismatch to the existing `microsoft/typescript-go#4521` tracker;
+- `upstream/diagnostic-locations-issue.md` is a self-contained issue draft for syntactic diagnostics that omit `start` and `length`.
+
+The generated documents include installation commands, minimal reproductions, expected/actual results, downstream impact, and links back to the executable fixture and sentinel. They are included in every compatibility artifact. The diagnostics draft must be checked against the current upstream tracker before filing to avoid a duplicate.
+
 ## Capability matrix
 
 `contract/parser-capabilities.json` is the declarative source of truth. Every required capability identifies:
@@ -77,8 +86,9 @@ npm run report
 
 `npm run report` writes:
 
-- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, and project-backed native observations;
-- `STATUS.md`, a stable human-readable view that changes only when the capability state changes.
+- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, project-backed native observations, and upstream evidence metadata;
+- `STATUS.md`, a stable human-readable view that changes only when the capability state changes;
+- `upstream/bom-4521.md` and `upstream/diagnostic-locations-issue.md`, generated upstream evidence documents.
 
 The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions also publishes it in the job summary and compatibility artifact.
 
