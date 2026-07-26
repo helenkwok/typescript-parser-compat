@@ -46,7 +46,28 @@ The project-backed adapter is deliberately reported separately because it:
 - cannot accept an isolated source string in the way `typescript-estree` requires;
 - therefore does not resolve the project-less parser blocker.
 
-The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent links, syntax diagnostics, and BOM alignment. Known discrepancies remain visible as sentinel tests so upstream fixes trigger a deliberate contract update.
+The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent links, syntax diagnostics, BOM alignment, and the methods and properties exposed on native `SourceFile` and node objects. Known discrepancies remain visible as sentinel tests so upstream fixes trigger a deliberate contract update.
+
+## `typescript-estree` API inventory
+
+`contract/typescript-estree-api.json` records the runtime API used by the project-less parser bootstrap and structural AST conversion path. The source evidence is pinned to a specific `typescript-eslint` commit and covers:
+
+- root symbols such as `createSourceFile`, `ScriptTarget`, `ScriptKind`, `Extension`, `LanguageVariant`, `SyntaxKind`, and `NodeFlags`;
+- token helpers such as `tokenToString`, `isToken`, and the scanner;
+- the `SourceFile` instance contract, including `parseDiagnostics` and location helpers;
+- the node instance contract, including parents, positions, traversal, child-token methods, and text methods;
+- located syntax diagnostics.
+
+The evaluator classifies each requirement as:
+
+- `root-ready`: available from the moving `typescript` package root;
+- `unstable-only`: available only from native unstable AST exports;
+- `project-only`: verified only on project-backed native AST objects;
+- `*-partial`: only part of the required surface is present;
+- `incompatible`: the API exists but fails the required behavior;
+- `missing`: no usable required API was detected.
+
+This inventory deliberately excludes the much larger type-aware `Program` and `TypeChecker` surface. `npm run report` generates `TYPESCRIPT-ESTREE-API.md` and embeds the complete inventory in `compatibility-report.json`.
 
 ## Upstream tracking
 
@@ -98,11 +119,12 @@ npm run report
 
 `npm run report` writes:
 
-- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, project-backed native observations, and upstream evidence metadata;
-- `STATUS.md`, a stable human-readable view that changes only when the capability state changes;
+- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, the `typescript-estree` API inventory, project-backed native observations, and upstream evidence metadata;
+- `STATUS.md`, a stable human-readable view of the parser capability contract;
+- `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
 - `upstream/bom-4521.md` and `upstream/diagnostic-locations-issue.md`, generated upstream evidence documents.
 
-The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions also publishes it in the job summary and compatibility artifact.
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes both status reports in the job summary and compatibility artifact.
 
 ## Package roles
 
@@ -116,7 +138,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every compatibility claim should be ba
 
 ## Scope
 
-The first phase covers parser entry points, AST traversal, source positions, JSX, comments, BOM handling, diagnostics, and parent links. Type-aware linting and the broader `Program`/`TypeChecker` API are deliberately out of scope until the file-level contract is reliable.
+The first phase covers parser entry points, AST traversal, source positions, JSX, comments, BOM handling, diagnostics, parent links, and the structural API required by `typescript-estree`. Type-aware linting and the broader `Program`/`TypeChecker` API remain out of scope until the file-level contract is reliable.
 
 ## License
 
