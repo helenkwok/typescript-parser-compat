@@ -26,15 +26,26 @@ test("project-backed native AST preserves ordinary source text and parent links"
   assert.equal(result.capabilities.parentLinksAndTraversal, true);
 });
 
-test("project-backed native diagnostic locations remain missing until fixed upstream", () => {
-  assert.equal(
-    result.capabilities.locatedSyntaxDiagnostics,
-    false,
-    "Diagnostic behavior changed: update the capability evidence if native syntactic diagnostics now expose start and length",
+test("project-backed native diagnostics expose pos and end locations", () => {
+  assert.equal(result.capabilities.locatedSyntaxDiagnostics, true);
+  assert.equal(typeof result.observations.firstSyntaxDiagnostic?.raw.code, "number");
+  assert.equal(typeof result.observations.firstSyntaxDiagnostic?.raw.pos, "number");
+  assert.equal(typeof result.observations.firstSyntaxDiagnostic?.raw.end, "number");
+  assert.ok(
+    result.observations.firstSyntaxDiagnostic.raw.end >=
+      result.observations.firstSyntaxDiagnostic.raw.pos,
   );
-  assert.equal(typeof result.observations.firstSyntaxDiagnostic?.code, "number");
-  assert.equal(result.observations.firstSyntaxDiagnostic?.start, undefined);
-  assert.equal(result.observations.firstSyntaxDiagnostic?.length, undefined);
+});
+
+test("native diagnostics can be normalized to TypeScript-style start and length", () => {
+  assert.equal(result.capabilities.legacyDiagnosticShape, false);
+  assert.equal(result.capabilities.normalizedSyntaxDiagnostics, true);
+
+  const { raw, normalized } = result.observations.firstSyntaxDiagnostic;
+  assert.equal(normalized.start, raw.pos);
+  assert.equal(normalized.length, raw.end - raw.pos);
+  assert.equal(normalized.fileName, raw.fileName);
+  assert.equal(normalized.messageText, raw.text);
 });
 
 test("project-backed native BOM mismatch remains visible until fixed upstream", () => {
