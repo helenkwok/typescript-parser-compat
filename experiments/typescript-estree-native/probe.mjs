@@ -82,10 +82,13 @@ function describeKind(node) {
   if (!node || typeof node.kind !== "number") {
     return null;
   }
+  const nativeKindName = nativeAst.SyntaxKind[node.kind] ?? String(node.kind);
+  const mappedByName = ts.SyntaxKind[nativeKindName];
   const translatedKind = translateKind(node.kind);
   return {
     nativeKind: node.kind,
-    nativeKindName: nativeAst.SyntaxKind[node.kind] ?? String(node.kind),
+    nativeKindName,
+    mappedByName: typeof mappedByName === "number" ? mappedByName : null,
     translatedKind,
     translatedKindName: ts.SyntaxKind[translatedKind] ?? String(translatedKind),
     text: node.text ?? null,
@@ -138,6 +141,29 @@ function describeNode(node) {
     legacyDecorators,
     legacyModifiers,
     children,
+  };
+}
+
+function inspectKindTranslations(sourceFile) {
+  const byNativeKind = new Map();
+  const visit = (node) => {
+    if (!byNativeKind.has(node.kind)) {
+      byNativeKind.set(node.kind, describeKind(node));
+    }
+    node.forEachChild(visit);
+  };
+  visit(sourceFile);
+  const all = [...byNativeKind.values()].sort(
+    (left, right) => left.nativeKind - right.nativeKind,
+  );
+  return {
+    all,
+    unsupported: all.filter((item) => item.mappedByName == null),
+    collisions: all.filter(
+      (item) =>
+        item.mappedByName == null &&
+        typeof ts.SyntaxKind[item.translatedKind] === "string",
+    ),
   };
 }
 
@@ -195,6 +221,7 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
         converterSourceFileKind: ts.SyntaxKind.SourceFile,
         kindMatchesConverter: sourceFile.kind === ts.SyntaxKind.SourceFile,
         translatedKind: translateKind(sourceFile.kind),
+        kindTranslations: inspectKindTranslations(sourceFile),
         decoratorSurface:
           fileName.includes("decorator")
             ? inspectDecoratorSurface(sourceFile)
