@@ -31,7 +31,7 @@ An optional batch form could reduce IPC overhead:
 api.parseSourceFiles(requests)
 ```
 
-The project-backed model in #2824 is appropriate for typed linting and semantic tools. It does not replace the syntax-only `typescript-estree` path, which intentionally creates a standalone `SourceFile` and no `Program`.
+The project-backed model in https://github.com/microsoft/typescript-go/issues/2824 is appropriate for typed linting and semantic tools. It does not replace the syntax-only `typescript-estree` path, which intentionally creates a standalone `SourceFile` and no `Program`.
 
 Executable evidence and the detailed minimal proposal are here:
 
