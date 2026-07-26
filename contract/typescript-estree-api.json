@@ -125,9 +125,9 @@
       "id": "node-instance",
       "layer": "ast-instance",
       "required": true,
-      "requirement": "Return nodes with positions, parents, traversal, text, child-token, and source-file methods.",
-      "evidence": "convert.ts and node-utils.ts use kind, pos, end, parent, forEachChild, getSourceFile, getStart, getFullStart, getEnd, getChildren, getFirstToken, getLastToken, getFullText, and getText.",
-      "probe": { "type": "project-surface", "target": "node", "members": ["kind", "pos", "end", "parent", "forEachChild", "getSourceFile", "getStart", "getFullStart", "getEnd", "getChildren", "getFirstToken", "getLastToken", "getFullText", "getText"] }
+      "requirement": "Return nodes with positions, parents, traversal, text, width, trivia, child, token, and source-file methods.",
+      "evidence": "The real typescript-estree converter uses kind, pos, end, parent, forEachChild, getSourceFile, getStart, getFullStart, getEnd, getWidth, getFullWidth, getLeadingTriviaWidth, getChildren, getChildCount, getChildAt, getFirstToken, getLastToken, getFullText, and getText.",
+      "probe": { "type": "project-surface", "target": "node", "members": ["kind", "pos", "end", "parent", "forEachChild", "getSourceFile", "getStart", "getFullStart", "getEnd", "getWidth", "getFullWidth", "getLeadingTriviaWidth", "getChildren", "getChildCount", "getChildAt", "getFirstToken", "getLastToken", "getFullText", "getText"] }
     },
     {
       "id": "located-parse-diagnostics",

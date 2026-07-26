@@ -55,7 +55,7 @@ The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent lin
 - root symbols such as `createSourceFile`, `ScriptTarget`, `ScriptKind`, `Extension`, `LanguageVariant`, `SyntaxKind`, and `NodeFlags`;
 - token helpers such as `tokenToString`, `isToken`, and the scanner;
 - the `SourceFile` instance contract, including `parseDiagnostics` and location helpers;
-- the node instance contract, including parents, positions, traversal, child-token methods, and text methods;
+- the node instance contract, including parents, positions, traversal, width, trivia, child, token, and text methods;
 - located syntax diagnostics and the mapping between native and legacy diagnostic shapes.
 
 The evaluator classifies each requirement as:
@@ -69,6 +69,27 @@ The evaluator classifies each requirement as:
 - `missing`: no usable required API was detected.
 
 This inventory deliberately excludes the much larger type-aware `Program` and `TypeChecker` surface. `npm run report` generates `TYPESCRIPT-ESTREE-API.md` and embeds the complete inventory in `compatibility-report.json`.
+
+## Actual `typescript-estree` conversion experiment
+
+`experiments/typescript-estree-native` runs the published `@typescript-eslint/typescript-estree@8.65.0` converter against real project-backed native ASTs while keeping its TypeScript 6 peer isolated from the root TypeScript 7 probes.
+
+The strict conversion contract currently proves:
+
+- **7/7 valid fixtures convert** into ESTree `Program` nodes;
+- JS, JSX, comments, generics, `satisfies`, decorators, tokens, and node maps are covered;
+- malformed TypeScript produces a located `TSError` at the expected line and column;
+- the native AST is structurally compatible after mechanical adapters.
+
+The required adapters are:
+
+- native diagnostic normalization (`pos`/`end`/`text`/`fileName` to the legacy diagnostic shape);
+- `SyntaxKind` translation by canonical enum name rather than numeric identity;
+- recursive wrapping of nodes, `NodeArray` values, and array helper results;
+- legacy range, width, trivia, child, and token methods expected by the converter;
+- token synthesis using the TypeScript 6 scanner where native nodes do not expose token children.
+
+This is strong evidence that the structural AST is usable. It does **not** solve the primary blocker because the native AST still requires a project and `tsconfig`. See [`TYPESCRIPT-ESTREE-CONVERSION.md`](TYPESCRIPT-ESTREE-CONVERSION.md).
 
 ## Upstream tracking
 
@@ -112,20 +133,31 @@ This separation makes it clear that utilities such as the scanner and AST naviga
 
 ## Run locally
 
+Run the root compatibility suite:
+
 ```bash
 npm install
 npm test
 npm run report
 ```
 
-`npm run report` writes:
+Run the isolated real-converter experiment:
+
+```bash
+npm install --prefix experiments/typescript-estree-native
+npm --prefix experiments/typescript-estree-native run probe
+```
+
+The reports are:
 
 - `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, the `typescript-estree` API inventory, project-backed native observations, and upstream evidence metadata;
 - `STATUS.md`, a stable human-readable view of the parser capability contract;
 - `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
+- `TYPESCRIPT-ESTREE-CONVERSION.md`, the asserted real-converter experiment summary;
+- `typescript-estree-native-conversion.json`, the machine-readable staged converter evidence;
 - `upstream/bom-4521.md` and `upstream/diagnostic-shape-4745.md`, generated upstream evidence documents.
 
-The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes both status reports in the job summary and compatibility artifact.
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all three Markdown status reports in the job summary and compatibility artifact.
 
 ## Package roles
 

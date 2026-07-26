@@ -34,13 +34,14 @@ jobs:
       - name: Add compatibility status to job summary
         if: always()
         run: |
-          if [ -f STATUS.md ]; then
-            cat STATUS.md >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -f TYPESCRIPT-ESTREE-API.md ]; then
-            printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
-            cat TYPESCRIPT-ESTREE-API.md >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for report in STATUS.md TYPESCRIPT-ESTREE-API.md TYPESCRIPT-ESTREE-CONVERSION.md; do
+            if [ -f "$report" ]; then
+              if [ -s "$GITHUB_STEP_SUMMARY" ]; then
+                printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
+              fi
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,6 +50,7 @@ jobs:
             compatibility-report.json
             STATUS.md
             TYPESCRIPT-ESTREE-API.md
+            TYPESCRIPT-ESTREE-CONVERSION.md
             typescript-estree-native-conversion.json
             typescript-estree-native-conversion-output.txt
             upstream/*.md
