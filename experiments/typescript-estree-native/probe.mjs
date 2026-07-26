@@ -168,9 +168,14 @@ function createDeepAdapter(
       getFullStart: () => fullStart,
       getStart: () => start,
       getEnd: () => end,
+      getWidth: () => end - start,
+      getFullWidth: () => end - fullStart,
+      getLeadingTriviaWidth: () => start - fullStart,
       getFullText: () => sourceFile.text.slice(fullStart, end),
       getText: () => sourceFile.text.slice(start, end),
       getChildren: () => [],
+      getChildCount: () => 0,
+      getChildAt: () => undefined,
       getFirstToken: () => token,
       getLastToken: () => token,
       forEachChild: () => undefined,
@@ -243,8 +248,12 @@ function createDeepAdapter(
     return result;
   }
 
+  function nodeStart(node) {
+    return node.getStart(sourceFile);
+  }
+
   function firstToken(node) {
-    const position = Math.min(node.getStart(sourceFile), Math.max(0, node.end - 1));
+    const position = Math.min(nodeStart(node), Math.max(0, node.end - 1));
     return wrap(nativeAst.getTokenAtPosition(sourceFile, position));
   }
 
@@ -290,11 +299,26 @@ function createDeepAdapter(
         if (structural && property === "getChildren") {
           return () => getChildren(target);
         }
+        if (structural && property === "getChildCount") {
+          return () => getChildren(target).length;
+        }
+        if (structural && property === "getChildAt") {
+          return (index) => getChildren(target)[index];
+        }
         if (structural && property === "getFirstToken") {
           return () => firstToken(target);
         }
         if (structural && property === "getLastToken") {
           return () => lastToken(target);
+        }
+        if (structural && property === "getWidth") {
+          return () => target.getEnd() - nodeStart(target);
+        }
+        if (structural && property === "getFullWidth") {
+          return () => target.end - target.pos;
+        }
+        if (structural && property === "getLeadingTriviaWidth") {
+          return () => nodeStart(target) - target.pos;
         }
 
         const result = Reflect.get(target, property, target);
@@ -391,7 +415,7 @@ const report = {
     kindAdapter:
       "Adds diagnostic normalization and maps native SyntaxKind values to TypeScript 6 values",
     structuralAdapter:
-      "Also adds recursive child wrapping, child traversal, and scanner-backed token methods",
+      "Also adds recursive child wrapping, standard node range/child methods, and scanner-backed token methods",
   },
   fixtures: results,
 };
