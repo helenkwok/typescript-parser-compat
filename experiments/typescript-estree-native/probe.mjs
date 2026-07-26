@@ -22,6 +22,8 @@ const fixtureNames = [
   "jsx.jsx",
   "comments.ts",
   "basic.ts",
+  "decorator-simple.ts",
+  "generic-constructor.ts",
   "decorators.ts",
   "invalid.ts",
 ];
@@ -147,7 +149,7 @@ const results = withNativeProject(files, ({ project, getSourceFile }) => {
         kindMatchesConverter: sourceFile.kind === ts.SyntaxKind.SourceFile,
         translatedKind: translateKind(sourceFile.kind),
         decoratorSurface:
-          fileName.endsWith("decorators.ts")
+          fileName.includes("decorator")
             ? inspectDecoratorSurface(sourceFile)
             : undefined,
       },
