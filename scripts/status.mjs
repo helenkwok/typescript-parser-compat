@@ -43,12 +43,28 @@ function formatEvidence(capability) {
   return "Verified against the native parser contract.";
 }
 
+function formatProjectCapabilities(projectProbe) {
+  if (!projectProbe?.available) {
+    return {
+      passed: [],
+      failed: [],
+    };
+  }
+
+  const entries = Object.entries(projectProbe.capabilities ?? {});
+  return {
+    passed: entries.filter(([, value]) => value === true).map(([name]) => name),
+    failed: entries.filter(([, value]) => value === false).map(([name]) => name),
+  };
+}
+
 export function renderCompatibilityStatus(report) {
-  const { capabilityMatrix } = report;
+  const { capabilityMatrix, nativeProjectProbe } = report;
   const { summary, capabilities } = capabilityMatrix;
   const blocker = summary.parserEntryPointDetected
     ? "A native parser entry point is present, but the file-level compatibility contract has not yet been fully verified against it."
     : "The native preview does not expose a direct project-less source-text parser. Scanner and AST utilities exist, but parser-dependent capabilities remain blocked.";
+  const projectCapabilities = formatProjectCapabilities(nativeProjectProbe);
 
   const rows = capabilities.map((capability) =>
     `| \`${escapeCell(capability.nativePreview.status)}\` | \`${escapeCell(capability.id)}\` | ${escapeCell(capability.category)} | ${escapeCell(capability.requirement)} | ${escapeCell(formatEvidence(capability))} |`,
@@ -69,6 +85,15 @@ export function renderCompatibilityStatus(report) {
     `- Covered by the TypeScript 6 reference suite: **${summary.referenceCovered}/${summary.requiredCapabilities}**`,
     `- Native capabilities ready: **${summary.nativeReady}/${summary.requiredCapabilities}**`,
     `- Native status distribution: **${formatCounts(summary.nativeStatuses)}**`,
+    "",
+    "## Project-backed native evidence",
+    "",
+    "The unstable sync API can load the same fixtures through a virtual `tsconfig` project. This is useful implementation evidence, but it does **not** satisfy the project-less parser requirement used by `typescript-estree`.",
+    "",
+    `- Behaviors passing through a native project: **${projectCapabilities.passed.length}** (${projectCapabilities.passed.map((name) => `\`${name}\``).join(", ") || "none"})`,
+    `- Behaviors currently failing through a native project: **${projectCapabilities.failed.length}** (${projectCapabilities.failed.map((name) => `\`${name}\``).join(", ") || "none"})`,
+    `- Requires a project: **${nativeProjectProbe?.requiresProject === true ? "yes" : "no"}**`,
+    `- Requires a tsconfig: **${nativeProjectProbe?.requiresTsconfig === true ? "yes" : "no"}**`,
     "",
     "## Capability matrix",
     "",
