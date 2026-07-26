@@ -2,11 +2,13 @@
 
 An independent executable compatibility specification for the minimum parser-facing TypeScript API needed by JavaScript tooling such as `typescript-estree`.
 
+**Current capability status:** see [`STATUS.md`](STATUS.md).
+
 ## Why this exists
 
 TypeScript 7 uses the native Go implementation. Its package currently exposes version information at the root and experimental API subpaths, but JavaScript tooling still needs a way to parse one in-memory source file without loading a project.
 
-This repository converts that requirement into tests and a machine-readable report. It is evidence for upstream API design, not a replacement TypeScript parser.
+This repository converts that requirement into tests and machine- and human-readable reports. It is evidence for upstream API design, not a replacement TypeScript parser.
 
 ## Current contract
 
@@ -60,7 +62,12 @@ npm test
 npm run report
 ```
 
-`npm run report` writes `compatibility-report.json` with package versions, detected APIs, a capability summary, and capability-by-capability native evidence.
+`npm run report` writes:
+
+- `compatibility-report.json`, containing package versions, detected APIs, summaries, and capability-by-capability evidence;
+- `STATUS.md`, a stable human-readable view that changes only when the capability state changes.
+
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions also publishes it in the job summary and compatibility artifact.
 
 ## Package roles
 
