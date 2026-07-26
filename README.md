@@ -48,14 +48,26 @@ The project-backed adapter is deliberately reported separately because it:
 
 The probe currently covers TS, TSX, JS, JSX, decorators, source text, parent links, syntax diagnostics, and BOM alignment. Known discrepancies remain visible as sentinel tests so upstream fixes trigger a deliberate contract update.
 
+## Upstream tracking
+
+The main blocker remains the absence of a direct project-less source-text parser in the TypeScript 7 native API.
+
+- [`microsoft/typescript-go#516`](https://github.com/microsoft/typescript-go/issues/516) tracks the broader compiler/API and extensibility requirement.
+- [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API and is currently blocked by the external API.
+- [`MarkusNeusinger/kurrentschrift#228`](https://github.com/MarkusNeusinger/kurrentschrift/issues/228) records the downstream TypeScript 7 upgrade blocker that motivated this compatibility harness.
+- [`microsoft/typescript-go#4521`](https://github.com/microsoft/typescript-go/issues/4521) tracks BOM/source-text and node-offset misalignment.
+- [`microsoft/typescript-go#4745`](https://github.com/microsoft/typescript-go/issues/4745) tracks syntactic diagnostics that omit `start` and `length`.
+
+Before opening another upstream issue, search for an existing tracker and prefer adding reproducible evidence to it.
+
 ## Upstream evidence
 
 `npm run report` converts failing native observations into issue-ready Markdown documents:
 
-- `upstream/bom-4521.md` maps the BOM/source-offset mismatch to the existing `microsoft/typescript-go#4521` tracker;
-- `upstream/diagnostic-locations-issue.md` is a self-contained issue draft for syntactic diagnostics that omit `start` and `length`.
+- `upstream/bom-4521.md` maps the BOM/source-offset mismatch to `microsoft/typescript-go#4521`;
+- `upstream/diagnostic-locations-issue.md` preserves the reproduction filed as `microsoft/typescript-go#4745`.
 
-The generated documents include installation commands, minimal reproductions, expected/actual results, downstream impact, and links back to the executable fixture and sentinel. They are included in every compatibility artifact. The diagnostics draft must be checked against the current upstream tracker before filing to avoid a duplicate.
+The generated documents include installation commands, minimal reproductions, expected/actual results, downstream impact, and links back to the executable fixture and sentinel. They are included in every compatibility artifact.
 
 ## Capability matrix
 
@@ -98,9 +110,19 @@ The committed `STATUS.md` is checked by the test suite, preventing it from drift
 - `typescript@next`: moving TypeScript 7.1 development package.
 - `@typescript/native-preview`: experimental native API and AST utilities.
 
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Every compatibility claim should be backed by a focused fixture, an executable test, and reproducible evidence. Generated status files must be updated through `npm run report`, not edited independently.
+
 ## Scope
 
 The first phase covers parser entry points, AST traversal, source positions, JSX, comments, BOM handling, diagnostics, and parent links. Type-aware linting and the broader `Program`/`TypeChecker` API are deliberately out of scope until the file-level contract is reliable.
+
+## License
+
+Copyright 2026 Helen Kwok.
+
+Licensed under the [Apache License 2.0](LICENSE).
 
 ## Status
 
