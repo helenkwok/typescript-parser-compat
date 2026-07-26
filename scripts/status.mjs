@@ -85,6 +85,5 @@ export function renderCompatibilityStatus(report) {
     "- `missing`: the required API entry point is not exposed.",
     "",
     "Package versions and the complete machine-readable evidence are written to `compatibility-report.json` by CI.",
-    "",
   ].join("\n")}\n`;
 }
