@@ -21,22 +21,20 @@ export function chooseCanonicalKindName(kind) {
   );
 }
 
-export function canonicalizeNativeSyntaxKindReverseMap() {
-  const changes = [];
+export function listCanonicalKindAliasChanges() {
   const numericKinds = new Set(
     Object.values(nativeAst.SyntaxKind).filter(
       (value) => typeof value === "number",
     ),
   );
 
-  for (const kind of numericKinds) {
-    const before = nativeAst.SyntaxKind[kind];
-    const after = chooseCanonicalKindName(kind);
-    if (typeof after === "string" && before !== after) {
-      nativeAst.SyntaxKind[kind] = after;
-      changes.push({ kind, before, after, aliases: getNativeKindAliases(kind) });
-    }
-  }
-
-  return changes;
+  return [...numericKinds]
+    .map((kind) => {
+      const before = nativeAst.SyntaxKind[kind];
+      const after = chooseCanonicalKindName(kind);
+      return { kind, before, after, aliases: getNativeKindAliases(kind) };
+    })
+    .filter(
+      ({ before, after }) => typeof after === "string" && before !== after,
+    );
 }
