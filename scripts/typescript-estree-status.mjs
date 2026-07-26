@@ -2,6 +2,7 @@ const CLASSIFICATION_ORDER = [
   "root-ready",
   "unstable-only",
   "project-only",
+  "adapter-required",
   "root-partial",
   "unstable-partial",
   "project-partial",
@@ -25,6 +26,9 @@ function compactStatus(result) {
     return result.missingMembers?.length
       ? `missing ${result.missingMembers.join(", ")}`
       : "missing";
+  }
+  if (result.status === "adapter-required") {
+    return `adapter required; native ${result.nativeFields?.join(", ") || "shape"} → legacy ${result.legacyFields?.join(", ") || "shape"}`;
   }
   if (result.status === "incompatible") {
     return "incompatible";
@@ -62,6 +66,7 @@ export function renderTypescriptEstreeApiStatus(inventory) {
     `- Available from the moving TypeScript package root: **${inventory.summary.rootReady}**`,
     `- Available only from unstable AST exports: **${inventory.summary.unstableOnly}**`,
     `- Verified only through a project-backed native API: **${inventory.summary.projectOnly}**`,
+    `- Available through a mechanical compatibility adapter: **${inventory.summary.adapterRequired}**`,
     `- Required requirements still incomplete: **${inventory.summary.incomplete}**`,
     `- Classification distribution: **${formatCounts(inventory.summary.classifications)}**`,
     "",
@@ -76,6 +81,7 @@ export function renderTypescriptEstreeApiStatus(inventory) {
     "- `root-ready`: available from the moving `typescript` package root.",
     "- `unstable-only`: available from `@typescript/native-preview/unstable/ast`, but not from the package root.",
     "- `project-only`: verified on project-backed native AST objects, which does not satisfy isolated parsing.",
+    "- `adapter-required`: the native API carries the needed data under a redesigned shape that must be normalized for current `typescript-estree` code.",
     "- `*-partial`: only part of the required members are available.",
     "- `incompatible`: the API exists but current behavior fails the required contract.",
     "- `missing`: no usable required API was detected.",
