@@ -57,6 +57,13 @@ export function createDeepAdapter(
     return rawByProxy.get(value) ?? value;
   }
 
+  function wrapResult(value) {
+    if (Array.isArray(value)) {
+      return wrapArray(value);
+    }
+    return isNode(value) ? wrap(value) : value;
+  }
+
   function wrapArray(array) {
     if (!array || typeof array !== "object") {
       return array;
@@ -82,13 +89,52 @@ export function createDeepAdapter(
         if (typeof value === "function") {
           if (property === "map") {
             return (callback, thisArg) =>
-              target.map((item, index) =>
+              wrapArray(
+                target.map((item, index) =>
+                  callback.call(thisArg, wrap(item), index, proxy),
+                ),
+              );
+          }
+          if (property === "filter") {
+            return (callback, thisArg) =>
+              wrapArray(
+                target.filter((item, index) =>
+                  callback.call(thisArg, wrap(item), index, proxy),
+                ),
+              );
+          }
+          if (property === "find") {
+            return (callback, thisArg) =>
+              wrap(
+                target.find((item, index) =>
+                  callback.call(thisArg, wrap(item), index, proxy),
+                ),
+              );
+          }
+          if (property === "findLast") {
+            return (callback, thisArg) =>
+              wrap(
+                target.findLast((item, index) =>
+                  callback.call(thisArg, wrap(item), index, proxy),
+                ),
+              );
+          }
+          if (property === "forEach") {
+            return (callback, thisArg) =>
+              target.forEach((item, index) =>
                 callback.call(thisArg, wrap(item), index, proxy),
               );
           }
-          return (...args) => value.apply(target, args.map(unwrap));
+          if (property === "some" || property === "every") {
+            return (callback, thisArg) =>
+              target[property]((item, index) =>
+                callback.call(thisArg, wrap(item), index, proxy),
+              );
+          }
+          return (...args) =>
+            wrapResult(value.apply(target, args.map(unwrap)));
         }
-        return isNode(value) ? wrap(value) : value;
+        return wrapResult(value);
       },
     });
     arrayCache.set(array, proxy);
@@ -278,17 +324,10 @@ export function createDeepAdapter(
 
         const result = Reflect.get(target, property, target);
         if (typeof result === "function") {
-          return (...args) => {
-            const returned = result.apply(target, args.map(unwrap));
-            return Array.isArray(returned) || isNode(returned)
-              ? wrap(returned)
-              : returned;
-          };
+          return (...args) =>
+            wrapResult(result.apply(target, args.map(unwrap)));
         }
-        if (Array.isArray(result) || isNode(result)) {
-          return wrap(result);
-        }
-        return result;
+        return wrapResult(result);
       },
     });
 
