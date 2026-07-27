@@ -27,6 +27,11 @@ jobs:
         run: |
           set -o pipefail
           npm --prefix experiments/typescript-estree-native test 2>&1 | tee native-adapter-test-output.txt
+      - name: Run source-string bootstrap facade
+        shell: bash
+        run: |
+          set -o pipefail
+          npm --prefix experiments/typescript-estree-native run bootstrap 2>&1 | tee typescript-estree-bootstrap-output.txt
       - name: Run native AST conversion experiment
         shell: bash
         run: |
@@ -110,7 +115,7 @@ jobs:
       - name: Add compatibility status to job summary
         if: always()
         run: |
-          for report in STATUS.md NATIVE-PARSER-CANDIDATES.md TYPESCRIPT-ESTREE-API.md TYPESCRIPT-ESTREE-CONVERSION.md ADAPTER-PROFILE.md PERFORMANCE.md; do
+          for report in STATUS.md NATIVE-PARSER-CANDIDATES.md TYPESCRIPT-ESTREE-API.md TYPESCRIPT-ESTREE-CONVERSION.md TYPESCRIPT-ESTREE-BOOTSTRAP.md ADAPTER-PROFILE.md PERFORMANCE.md; do
             if [ -f "$report" ]; then
               if [ -s "$GITHUB_STEP_SUMMARY" ]; then
                 printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
@@ -128,6 +133,9 @@ jobs:
             NATIVE-PARSER-CANDIDATES.md
             TYPESCRIPT-ESTREE-API.md
             TYPESCRIPT-ESTREE-CONVERSION.md
+            TYPESCRIPT-ESTREE-BOOTSTRAP.md
+            typescript-estree-bootstrap-facade.json
+            typescript-estree-bootstrap-output.txt
             ADAPTER-PROFILE.md
             adapter-profile.json
             native-adapter-profile-output.txt

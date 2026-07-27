@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node --test *.test.mjs",
     "probe": "node probe.mjs",
+    "bootstrap": "node bootstrap-probe.mjs",
     "profile": "node profile-adapter.mjs --sizes 1,8,32",
     "profile:smoke": "node profile-adapter.mjs --sizes 1,8",
     "benchmark": "node benchmark.mjs --warmups 2 --iterations 5 --sizes 1,8,32",
