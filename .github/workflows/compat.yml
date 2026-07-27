@@ -32,6 +32,17 @@ jobs:
         run: |
           set -o pipefail
           npm --prefix experiments/typescript-estree-native run probe 2>&1 | tee typescript-estree-native-conversion-output.txt
+      - name: Profile native ESTree adapter
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              npm --prefix experiments/typescript-estree-native run profile
+            else
+              npm --prefix experiments/typescript-estree-native run profile:smoke
+            fi
+          } 2>&1 | tee native-adapter-profile-output.txt
       - name: Run parser pipeline benchmark
         shell: bash
         run: |
@@ -99,7 +110,7 @@ jobs:
       - name: Add compatibility status to job summary
         if: always()
         run: |
-          for report in STATUS.md NATIVE-PARSER-CANDIDATES.md TYPESCRIPT-ESTREE-API.md TYPESCRIPT-ESTREE-CONVERSION.md PERFORMANCE.md; do
+          for report in STATUS.md NATIVE-PARSER-CANDIDATES.md TYPESCRIPT-ESTREE-API.md TYPESCRIPT-ESTREE-CONVERSION.md ADAPTER-PROFILE.md PERFORMANCE.md; do
             if [ -f "$report" ]; then
               if [ -s "$GITHUB_STEP_SUMMARY" ]; then
                 printf '\n---\n\n' >> "$GITHUB_STEP_SUMMARY"
@@ -117,6 +128,9 @@ jobs:
             NATIVE-PARSER-CANDIDATES.md
             TYPESCRIPT-ESTREE-API.md
             TYPESCRIPT-ESTREE-CONVERSION.md
+            ADAPTER-PROFILE.md
+            adapter-profile.json
+            native-adapter-profile-output.txt
             PERFORMANCE.md
             performance-report.json
             parser-performance-output.txt
