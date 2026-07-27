@@ -101,6 +101,17 @@ The required adapters are:
 
 This is strong evidence that the structural AST is usable. It does **not** solve the primary blocker because the native AST still requires a project and `tsconfig`. See [`TYPESCRIPT-ESTREE-CONVERSION.md`](TYPESCRIPT-ESTREE-CONVERSION.md).
 
+## Parser pipeline performance
+
+`experiments/typescript-estree-native/benchmark.mjs` records where time is spent in the two current syntax-to-ESTree paths:
+
+- TypeScript 6 project-less parsing followed by strict ESTree conversion;
+- native virtual filesystem creation, synchronous API startup, project loading, AST retrieval, diagnostics, compatibility adapters, and strict ESTree conversion.
+
+The report separates the native **warm AST-to-ESTree** phases from the **cold project-to-ESTree** pipeline. Standard scheduled runs measure 1, 8, and 32 files with repeated samples; pull requests and normal pushes use a smaller smoke configuration.
+
+This is an observational benchmark only. It has no timing thresholds, and it does not claim that the two paths provide identical semantics. See [`docs/parser-pipeline-performance.md`](docs/parser-pipeline-performance.md) and the generated [`PERFORMANCE.md`](PERFORMANCE.md).
+
 ## Isolated parser API proposal
 
 [`docs/isolated-source-parser-api.md`](docs/isolated-source-parser-api.md) turns the converter result into a minimal upstream request for the curated TypeScript native API:
@@ -173,11 +184,23 @@ npm test
 npm run report
 ```
 
-Run the isolated real-converter experiment:
+Install and run the isolated conversion experiment:
 
 ```bash
 npm install --prefix experiments/typescript-estree-native
 npm --prefix experiments/typescript-estree-native run probe
+```
+
+Run the full parser pipeline benchmark:
+
+```bash
+npm --prefix experiments/typescript-estree-native run benchmark
+```
+
+Run the quick smoke benchmark used by pull requests:
+
+```bash
+npm --prefix experiments/typescript-estree-native run benchmark:smoke
 ```
 
 The reports are:
@@ -188,9 +211,11 @@ The reports are:
 - `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
 - `TYPESCRIPT-ESTREE-CONVERSION.md`, the asserted real-converter experiment summary, including an isolated-candidate column when available;
 - `typescript-estree-native-conversion.json`, the machine-readable staged converter evidence;
+- `PERFORMANCE.md`, the human-readable parser pipeline benchmark;
+- `performance-report.json`, the benchmark environment, configuration, raw samples, and summary statistics;
 - `upstream/bom-4521.md` and `upstream/diagnostic-shape-4745.md`, generated upstream evidence documents.
 
-The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all four Markdown compatibility reports in the job summary and compatibility artifact.
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all compatibility and performance Markdown reports in the job summary and compatibility artifact.
 
 ## Package roles
 
