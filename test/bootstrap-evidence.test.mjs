@@ -22,8 +22,6 @@ const followUp = await readFile(
   "utf8",
 );
 
-const documents = [snapshot, integration, proposal, followUp];
-
 test("source-string bootstrap evidence records the asserted result", () => {
   assert.match(snapshot, /parse\(string\).*\*\*7\/7\*\*/);
   assert.match(snapshot, /parseAndGenerateServices\(string\).*\*\*7\/7\*\*/);
@@ -35,8 +33,8 @@ test("source-string bootstrap evidence records the asserted result", () => {
 test("integration analysis identifies one downstream bootstrap boundary", () => {
   assert.match(integration, /one runtime call/i);
   assert.match(integration, /ts\.createSourceFile/);
-  assert.match(integration, /15 projects created/i);
-  assert.match(integration, /15.*closed/i);
+  assert.match(integration, /temporary native projects created: \*\*15\*\*/i);
+  assert.match(integration, /temporary native projects closed: \*\*15\*\*/i);
   assert.match(integration, /public `parse\(string\)`/);
   assert.match(integration, /do not need redesign/i);
   assert.match(integration, /direct isolated native operation remains the blocker/i);
