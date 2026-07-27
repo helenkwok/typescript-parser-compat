@@ -5,7 +5,7 @@
   "scripts": {
     "probe": "node probe.mjs",
     "benchmark": "node benchmark.mjs --warmups 2 --iterations 5 --sizes 1,8,32",
-    "benchmark:smoke": "node benchmark.mjs --warmups 0 --iterations 1 --sizes 1,8"
+    "benchmark:smoke": "node benchmark.mjs --warmups 1 --iterations 1 --sizes 1,8"
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "8.65.0",
