@@ -1,19 +1,54 @@
 import { readFile } from "node:fs/promises";
 
 const contractUrl = new URL("../contract/parser-capabilities.json", import.meta.url);
-const parserPattern = /^(createSourceFile|parse|parseSourceFile|sourceFileFromText)$/i;
+const parserPattern = /^(createSourceFile|parseSourceFile|sourceFileFromText|parseFile|parseSourceFiles|createSourceFiles)$/i;
 
 export async function loadCapabilityContract() {
   return JSON.parse(await readFile(contractUrl, "utf8"));
 }
 
-function evaluateProbe(probe, nativeAst, parserCandidates) {
+function parserEvidence(capabilityId, parserCandidates, parserProbe) {
+  const verified = parserProbe?.capabilities?.[capabilityId] === true;
+  return {
+    verified,
+    parserCandidates,
+    probeStatus: parserProbe?.status ?? "not-run",
+  };
+}
+
+function detectedStatus(capabilityId, parserProbe) {
+  if (parserProbe?.capabilities?.[capabilityId] === true) {
+    return "ready";
+  }
+  if (parserProbe?.status === "partial") {
+    return "partial";
+  }
+  if (parserProbe?.status === "incompatible") {
+    return "incompatible";
+  }
+  return "unverified";
+}
+
+function evaluateProbe(
+  capabilityId,
+  probe,
+  nativeAst,
+  parserCandidates,
+  parserProbe,
+) {
+  const parserDetected = parserCandidates.length > 0;
+  const candidateEvidence = parserEvidence(
+    capabilityId,
+    parserCandidates,
+    parserProbe,
+  );
+
   switch (probe.type) {
     case "parser-entry-point":
-      return parserCandidates.length > 0
+      return parserDetected
         ? {
-            status: "unverified",
-            evidence: { parserCandidates },
+            status: detectedStatus(capabilityId, parserProbe),
+            evidence: candidateEvidence,
           }
         : {
             status: "missing",
@@ -21,10 +56,10 @@ function evaluateProbe(probe, nativeAst, parserCandidates) {
           };
 
     case "parser-dependent":
-      return parserCandidates.length > 0
+      return parserDetected
         ? {
-            status: "unverified",
-            evidence: { parserCandidates },
+            status: detectedStatus(capabilityId, parserProbe),
+            evidence: candidateEvidence,
           }
         : {
             status: "blocked",
@@ -40,7 +75,7 @@ function evaluateProbe(probe, nativeAst, parserCandidates) {
         (name) => typeof nativeAst[name] === "undefined",
       );
 
-      if (parserCandidates.length === 0) {
+      if (!parserDetected) {
         return {
           status: availableExports.length > 0 ? "partial" : "blocked",
           evidence: {
@@ -51,10 +86,16 @@ function evaluateProbe(probe, nativeAst, parserCandidates) {
         };
       }
 
+      const parserReady = parserProbe?.capabilities?.[capabilityId] === true;
       return {
-        status: missingExports.length === 0 ? "unverified" : "partial",
+        status:
+          parserReady && missingExports.length === 0
+            ? "ready"
+            : parserReady || availableExports.length > 0
+              ? "partial"
+              : detectedStatus(capabilityId, parserProbe),
         evidence: {
-          parserCandidates,
+          ...candidateEvidence,
           availableExports,
           missingExports,
         },
@@ -66,10 +107,19 @@ function evaluateProbe(probe, nativeAst, parserCandidates) {
   }
 }
 
-export function evaluateCapabilityContract(contract, nativeAst) {
-  const parserCandidates = Object.keys(nativeAst).filter((name) =>
-    parserPattern.test(name),
-  );
+export function evaluateCapabilityContract(
+  contract,
+  nativeAst,
+  parserProbe = undefined,
+) {
+  const fallbackCandidates = Object.keys(nativeAst)
+    .filter((name) => parserPattern.test(name))
+    .map((name) => ({
+      id: `native-ast.${name}`,
+      owner: "native-ast",
+      name,
+    }));
+  const parserCandidates = parserProbe?.candidates ?? fallbackCandidates;
 
   const capabilities = contract.capabilities.map((capability) => ({
     id: capability.id,
@@ -82,9 +132,11 @@ export function evaluateCapabilityContract(contract, nativeAst) {
       fixtures: capability.fixtures,
     },
     nativePreview: evaluateProbe(
+      capability.id,
       capability.nativeProbe,
       nativeAst,
       parserCandidates,
+      parserProbe,
     ),
   }));
 
@@ -108,6 +160,7 @@ export function evaluateCapabilityContract(contract, nativeAst) {
       ).length,
       nativeStatuses,
       parserEntryPointDetected: parserCandidates.length > 0,
+      parserProbeStatus: parserProbe?.status ?? "not-run",
     },
     parserCandidates,
     capabilities,

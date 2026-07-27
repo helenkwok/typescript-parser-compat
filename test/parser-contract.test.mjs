@@ -5,6 +5,8 @@ import test from "node:test";
 import ts6 from "typescript6";
 import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
+import { runNativeParserCandidateProbe } from "../scripts/native-parser-candidates.mjs";
+
 async function readFixture(name) {
   return readFile(new URL(`../fixtures/${name}`, import.meta.url), "utf8");
 }
@@ -154,14 +156,23 @@ test("native preview exposes AST utility primitives", () => {
   assert.equal(typeof nativeAst.getTokenAtPosition, "function");
 });
 
-test("native parser entry-point appearance triggers an adapter update", () => {
-  const candidates = Object.keys(nativeAst).filter((name) =>
-    /^(createSourceFile|parse|parseSourceFile|sourceFileFromText)$/i.test(name),
-  );
+test("native isolated parser candidates are absent or contract-tested", async () => {
+  const probe = await runNativeParserCandidateProbe();
 
-  assert.deepEqual(
-    candidates,
-    [],
-    `Native parser entry point(s) appeared: ${candidates.join(", ")}. Add a native parser adapter and replace this sentinel test with contract tests.`,
+  if (probe.status === "absent") {
+    assert.deepEqual(probe.candidates, []);
+    assert.equal(probe.capabilities["source-text-entry-point"], false);
+    return;
+  }
+
+  assert.ok(probe.candidates.length > 0);
+  assert.ok(
+    probe.reports.length > 0,
+    "Detected parser candidates must produce executable fixture reports",
+  );
+  assert.equal(
+    probe.status,
+    "ready",
+    `Native isolated parser candidate(s) appeared but did not satisfy the full contract: ${JSON.stringify(probe.reports, null, 2)}`,
   );
 });

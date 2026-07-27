@@ -7,6 +7,8 @@ import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "./capabilities.mjs";
+import { runNativeParserCandidateProbe } from "./native-parser-candidates.mjs";
+import { renderNativeParserCandidateStatus } from "./native-parser-candidate-status.mjs";
 import { runNativeProjectProbe } from "./native-project-probe.mjs";
 import { renderCompatibilityStatus } from "./status.mjs";
 import {
@@ -17,7 +19,12 @@ import { renderTypescriptEstreeApiStatus } from "./typescript-estree-status.mjs"
 import { renderUpstreamEvidence } from "./upstream-evidence.mjs";
 
 const contract = await loadCapabilityContract();
-const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
+const nativeParserCandidateProbe = await runNativeParserCandidateProbe();
+const capabilityMatrix = evaluateCapabilityContract(
+  contract,
+  nativeAst,
+  nativeParserCandidateProbe,
+);
 const nativeProjectProbe = await runNativeProjectProbe();
 const typescriptEstreeContract = await loadTypescriptEstreeApiInventory();
 const typescriptEstreeApi = evaluateTypescriptEstreeApiInventory(
@@ -47,6 +54,7 @@ const report = {
       getTokenAtPosition: typeof nativeAst.getTokenAtPosition === "function",
     },
   },
+  nativeParserCandidateProbe,
   capabilityMatrix,
   typescriptEstreeApi,
   nativeProjectProbe,
@@ -74,6 +82,9 @@ const report = {
 
 const jsonReport = `${JSON.stringify(report, null, 2)}\n`;
 const markdownStatus = renderCompatibilityStatus(report);
+const nativeParserCandidateStatus = renderNativeParserCandidateStatus(
+  nativeParserCandidateProbe,
+);
 const typescriptEstreeStatus = renderTypescriptEstreeApiStatus(
   typescriptEstreeApi,
 );
@@ -82,6 +93,7 @@ await mkdir("upstream", { recursive: true });
 await Promise.all([
   writeFile("compatibility-report.json", jsonReport),
   writeFile("STATUS.md", markdownStatus),
+  writeFile("NATIVE-PARSER-CANDIDATES.md", nativeParserCandidateStatus),
   writeFile("TYPESCRIPT-ESTREE-API.md", typescriptEstreeStatus),
   writeFile("upstream/bom-4521.md", upstreamDocuments.bom),
   writeFile(
