@@ -22,6 +22,11 @@ jobs:
       - run: npm install
       - name: Install typescript-estree conversion experiment
         run: npm install --prefix experiments/typescript-estree-native
+      - name: Run native adapter tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm --prefix experiments/typescript-estree-native test 2>&1 | tee native-adapter-test-output.txt
       - name: Run native AST conversion experiment
         shell: bash
         run: |
@@ -115,6 +120,7 @@ jobs:
             PERFORMANCE.md
             performance-report.json
             parser-performance-output.txt
+            native-adapter-test-output.txt
             typescript-estree-native-conversion.json
             typescript-estree-native-conversion-output.txt
             native-parser-notification.md
