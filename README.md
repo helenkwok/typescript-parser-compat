@@ -91,11 +91,30 @@ The required adapters are:
 
 This is strong evidence that the structural AST is usable. It does **not** solve the primary blocker because the native AST still requires a project and `tsconfig`. See [`TYPESCRIPT-ESTREE-CONVERSION.md`](TYPESCRIPT-ESTREE-CONVERSION.md).
 
+## Isolated parser API proposal
+
+[`docs/isolated-source-parser-api.md`](docs/isolated-source-parser-api.md) turns the converter result into a minimal upstream request for the curated TypeScript native API:
+
+- add one synchronous `parseSourceFile`-style operation;
+- accept an in-memory filename, source text, and explicit script kind;
+- require no project, `tsconfig`, module resolution, library loading, or type checking;
+- return the existing native `SourceFile` schema plus native `pos`/`end` diagnostics;
+- optionally provide a batch form to reduce IPC overhead.
+
+The proposal deliberately does **not** request the full TypeScript 6 compiler API, matching numeric enum values, a plugin host, transforms, emit, or typed linting without a project.
+
+Ready-to-post summaries are maintained in:
+
+- [`upstream/api-discussion-455.md`](upstream/api-discussion-455.md) for the canonical `microsoft/typescript-go` API discussion;
+- [`upstream/typescript-eslint-10940.md`](upstream/typescript-eslint-10940.md) for the downstream adoption tracker.
+
 ## Upstream tracking
 
 The main blocker remains the absence of a direct project-less source-text parser in the TypeScript 7 native API.
 
-- [`microsoft/typescript-go#516`](https://github.com/microsoft/typescript-go/issues/516) tracks the broader compiler/API and extensibility requirement.
+- [`microsoft/typescript-go` Discussion #455](https://github.com/microsoft/typescript-go/discussions/455) is the canonical general discussion for the curated IPC API and critical use cases.
+- [`microsoft/typescript-go#2824`](https://github.com/microsoft/typescript-go/issues/2824) develops project-backed API patterns for complex editor extensions and virtual files.
+- [`microsoft/typescript-go#516`](https://github.com/microsoft/typescript-go/issues/516) tracks the broader compiler/API and extensibility requirement and points API discussion to #455.
 - [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API and is currently blocked by the external API.
 - [`MarkusNeusinger/kurrentschrift#228`](https://github.com/MarkusNeusinger/kurrentschrift/issues/228) records the downstream TypeScript 7 upgrade blocker that motivated this compatibility harness.
 - [`microsoft/typescript-go#4521`](https://github.com/microsoft/typescript-go/issues/4521) tracks BOM/source-text and node-offset misalignment.
@@ -109,6 +128,8 @@ Before opening another upstream issue, search for an existing tracker and prefer
 
 - `upstream/bom-4521.md` maps the BOM/source-offset mismatch to `microsoft/typescript-go#4521`;
 - `upstream/diagnostic-shape-4745.md` records the intentional `pos`/`end` diagnostic interface and the verified compatibility adapter.
+
+The repository also maintains the isolated parser proposal and two review-ready comments alongside the executable evidence. See [`upstream/README.md`](upstream/README.md).
 
 The generated documents include installation commands, minimal reproductions, expected/actual results, downstream impact, and links back to the executable fixture and sentinel. They are included in every compatibility artifact.
 
