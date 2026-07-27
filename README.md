@@ -101,6 +101,19 @@ The required adapters are:
 
 This is strong evidence that the structural AST is usable. It does **not** solve the primary blocker because the native AST still requires a project and `tsconfig`. See [`TYPESCRIPT-ESTREE-CONVERSION.md`](TYPESCRIPT-ESTREE-CONVERSION.md).
 
+## Native adapter cache profile
+
+The structural adapter caches deterministic child lists, node starts, and first/last-token results per raw native node, while reusing one TypeScript scanner per adapted source file. Node and NodeArray proxy identity caches remain unchanged.
+
+[`ADAPTER-PROFILE.md`](ADAPTER-PROFILE.md) compares strict conversion with the new structural caches disabled and enabled in the same workflow. For the 8-file smoke workload, caching removed:
+
+- **54.5%** of child-list computations;
+- **56.1%** of source-gap scans;
+- **96.8%** of scanner constructions;
+- **58.7%** of duplicate synthetic-token creation.
+
+Both modes must produce identical ESTree token counts, comment counts, and successful `Program` results. These deterministic counters establish removed work, not a stable wall-clock speedup. See [`docs/native-estree-adapter-caching.md`](docs/native-estree-adapter-caching.md).
+
 ## Parser pipeline performance
 
 `experiments/typescript-estree-native/benchmark.mjs` records where time is spent in the two current syntax-to-ESTree paths:
@@ -188,7 +201,20 @@ Install and run the isolated conversion experiment:
 
 ```bash
 npm install --prefix experiments/typescript-estree-native
+npm --prefix experiments/typescript-estree-native test
 npm --prefix experiments/typescript-estree-native run probe
+```
+
+Run the deterministic adapter profile:
+
+```bash
+npm --prefix experiments/typescript-estree-native run profile
+```
+
+Run the quick adapter profile used by pull requests:
+
+```bash
+npm --prefix experiments/typescript-estree-native run profile:smoke
 ```
 
 Run the full parser pipeline benchmark:
@@ -211,11 +237,13 @@ The reports are:
 - `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
 - `TYPESCRIPT-ESTREE-CONVERSION.md`, the asserted real-converter experiment summary, including an isolated-candidate column when available;
 - `typescript-estree-native-conversion.json`, the machine-readable staged converter evidence;
+- `ADAPTER-PROFILE.md`, deterministic uncached-versus-cached adapter operation counts;
+- `adapter-profile.json`, machine-readable adapter counters and reductions;
 - `PERFORMANCE.md`, the human-readable parser pipeline benchmark;
 - `performance-report.json`, the benchmark environment, configuration, raw samples, and summary statistics;
 - `upstream/bom-4521.md` and `upstream/diagnostic-shape-4745.md`, generated upstream evidence documents.
 
-The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all compatibility and performance Markdown reports in the job summary and compatibility artifact.
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all compatibility, adapter-profile, and performance Markdown reports in the job summary and compatibility artifact.
 
 ## Package roles
 
