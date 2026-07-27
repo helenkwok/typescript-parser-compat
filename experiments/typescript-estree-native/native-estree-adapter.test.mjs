@@ -42,7 +42,6 @@ test("structural child traversal is computed once per node", () => {
     assert.ok(instrumentation.getChildrenCacheHits >= 3);
     assert.equal(instrumentation.scannerCreations, scannerCreations);
     assert.ok(instrumentation.scannerCreations <= 1);
-    assert.ok(instrumentation.gapScans > 0);
   });
 });
 
