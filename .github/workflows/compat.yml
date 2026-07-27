@@ -7,6 +7,10 @@ on:
     - cron: "17 3 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -31,6 +35,51 @@ jobs:
       - name: Generate compatibility report
         if: always()
         run: npm run report
+      - name: Prepare native parser state notification
+        id: native_parser_state
+        if: >-
+          always() &&
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GITHUB_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git show HEAD:NATIVE-PARSER-CANDIDATES.md > native-parser-baseline.md
+          node scripts/native-parser-notification.mjs \
+            --baseline native-parser-baseline.md \
+            --current NATIVE-PARSER-CANDIDATES.md \
+            --output native-parser-notification.md \
+            --summary native-parser-notification.json
+      - name: Open or update native parser state issue
+        if: >-
+          always() &&
+          steps.native_parser_state.outputs.changed == 'true' &&
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: ${{ steps.native_parser_state.outputs.title }}
+        shell: bash
+        run: |
+          issue_number=$(gh issue list \
+            --state all \
+            --limit 100 \
+            --search '"Native parser compatibility state changed" in:title' \
+            --json number,title \
+            --jq '.[] | select(.title == env.ISSUE_TITLE) | .number' \
+            | head -n 1)
+
+          if [ -n "$issue_number" ]; then
+            gh issue reopen "$issue_number" >/dev/null 2>&1 || true
+            gh issue edit "$issue_number" \
+              --body-file native-parser-notification.md \
+              --add-assignee "$GITHUB_REPOSITORY_OWNER"
+          else
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --body-file native-parser-notification.md \
+              --assignee "$GITHUB_REPOSITORY_OWNER"
+          fi
       - name: Add compatibility status to job summary
         if: always()
         run: |
@@ -54,6 +103,8 @@ jobs:
             TYPESCRIPT-ESTREE-CONVERSION.md
             typescript-estree-native-conversion.json
             typescript-estree-native-conversion-output.txt
+            native-parser-notification.md
+            native-parser-notification.json
             upstream/*.md
             test-output.txt
           if-no-files-found: warn
