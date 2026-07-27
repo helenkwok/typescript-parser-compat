@@ -76,7 +76,12 @@ export function createDeepAdapter(
   sourceFile,
   diagnostics,
   getSourceFile,
-  { structural = false, instrumentation } = {},
+  {
+    structural = false,
+    instrumentation,
+    cacheStructural = true,
+    reuseScanner = true,
+  } = {},
 ) {
   const nodeCache = new WeakMap();
   const arrayCache = new WeakMap();
@@ -208,15 +213,22 @@ export function createDeepAdapter(
     return token;
   }
 
+  function createScanner() {
+    increment(instrumentation, "scannerCreations");
+    return ts.createScanner(
+      ts.ScriptTarget.Latest,
+      true,
+      sourceFile.languageVariant ?? ts.LanguageVariant.Standard,
+      sourceFile.text,
+    );
+  }
+
   function getScanner() {
+    if (!reuseScanner) {
+      return createScanner();
+    }
     if (!scanner) {
-      scanner = ts.createScanner(
-        ts.ScriptTarget.Latest,
-        true,
-        sourceFile.languageVariant ?? ts.LanguageVariant.Standard,
-        sourceFile.text,
-      );
-      increment(instrumentation, "scannerCreations");
+      scanner = createScanner();
     }
     return scanner;
   }
@@ -272,7 +284,7 @@ export function createDeepAdapter(
 
   function getChildren(node) {
     increment(instrumentation, "getChildrenRequests");
-    if (childrenCache.has(node)) {
+    if (cacheStructural && childrenCache.has(node)) {
       increment(instrumentation, "getChildrenCacheHits");
       return childrenCache.get(node);
     }
@@ -287,45 +299,53 @@ export function createDeepAdapter(
       cursor = Math.max(cursor, child.end);
     }
     result.push(...scanGap(cursor, node.end, node));
-    childrenCache.set(node, result);
+    if (cacheStructural) {
+      childrenCache.set(node, result);
+    }
     return result;
   }
 
   function nodeStart(node) {
     increment(instrumentation, "nodeStartRequests");
-    if (startCache.has(node)) {
+    if (cacheStructural && startCache.has(node)) {
       increment(instrumentation, "nodeStartCacheHits");
       return startCache.get(node);
     }
     increment(instrumentation, "nodeStartComputations");
     const start = node.getStart(sourceFile);
-    startCache.set(node, start);
+    if (cacheStructural) {
+      startCache.set(node, start);
+    }
     return start;
   }
 
   function firstToken(node) {
     increment(instrumentation, "firstTokenRequests");
-    if (firstTokenCache.has(node)) {
+    if (cacheStructural && firstTokenCache.has(node)) {
       increment(instrumentation, "firstTokenCacheHits");
       return firstTokenCache.get(node);
     }
     increment(instrumentation, "firstTokenComputations");
     const position = Math.min(nodeStart(node), Math.max(0, node.end - 1));
     const token = wrap(nativeAst.getTokenAtPosition(sourceFile, position));
-    firstTokenCache.set(node, token);
+    if (cacheStructural) {
+      firstTokenCache.set(node, token);
+    }
     return token;
   }
 
   function lastToken(node) {
     increment(instrumentation, "lastTokenRequests");
-    if (lastTokenCache.has(node)) {
+    if (cacheStructural && lastTokenCache.has(node)) {
       increment(instrumentation, "lastTokenCacheHits");
       return lastTokenCache.get(node);
     }
     increment(instrumentation, "lastTokenComputations");
     const rawToken = nativeAst.findPrecedingToken(sourceFile, node.end);
     const token = rawToken ? wrap(rawToken) : undefined;
-    lastTokenCache.set(node, token);
+    if (cacheStructural) {
+      lastTokenCache.set(node, token);
+    }
     return token;
   }
 
