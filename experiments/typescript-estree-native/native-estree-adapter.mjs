@@ -20,6 +20,38 @@ export function translateKind(kind) {
   return typeof translated === "number" ? translated : kind;
 }
 
+export function createAdapterInstrumentation() {
+  return {
+    nodeProxyCreates: 0,
+    nodeProxyCacheHits: 0,
+    arrayProxyCreates: 0,
+    arrayProxyCacheHits: 0,
+    getChildrenRequests: 0,
+    getChildrenComputations: 0,
+    getChildrenCacheHits: 0,
+    directChildrenCalls: 0,
+    gapScans: 0,
+    scannerCreations: 0,
+    syntheticTokens: 0,
+    nodeStartRequests: 0,
+    nodeStartComputations: 0,
+    nodeStartCacheHits: 0,
+    firstTokenRequests: 0,
+    firstTokenComputations: 0,
+    firstTokenCacheHits: 0,
+    lastTokenRequests: 0,
+    lastTokenComputations: 0,
+    lastTokenCacheHits: 0,
+  };
+}
+
+function increment(instrumentation, name, amount = 1) {
+  if (!instrumentation) {
+    return;
+  }
+  instrumentation[name] = (instrumentation[name] ?? 0) + amount;
+}
+
 export function createDiagnosticOnlyAdapter(
   sourceFile,
   diagnostics,
@@ -44,13 +76,18 @@ export function createDeepAdapter(
   sourceFile,
   diagnostics,
   getSourceFile,
-  { structural },
+  { structural = false, instrumentation } = {},
 ) {
   const nodeCache = new WeakMap();
   const arrayCache = new WeakMap();
   const rawByProxy = new WeakMap();
+  const childrenCache = new WeakMap();
+  const startCache = new WeakMap();
+  const firstTokenCache = new WeakMap();
+  const lastTokenCache = new WeakMap();
   let normalizedDiagnostics = [];
   let wrappedSourceFile;
+  let scanner;
 
   function unwrap(value) {
     return rawByProxy.get(value) ?? value;
@@ -69,6 +106,7 @@ export function createDeepAdapter(
     }
     const cached = arrayCache.get(array);
     if (cached) {
+      increment(instrumentation, "arrayProxyCacheHits");
       return cached;
     }
 
@@ -138,6 +176,7 @@ export function createDeepAdapter(
     });
     arrayCache.set(array, proxy);
     rawByProxy.set(proxy, array);
+    increment(instrumentation, "arrayProxyCreates");
     return proxy;
   }
 
@@ -165,30 +204,40 @@ export function createDeepAdapter(
       getLastToken: () => token,
       forEachChild: () => undefined,
     };
+    increment(instrumentation, "syntheticTokens");
     return token;
+  }
+
+  function getScanner() {
+    if (!scanner) {
+      scanner = ts.createScanner(
+        ts.ScriptTarget.Latest,
+        true,
+        sourceFile.languageVariant ?? ts.LanguageVariant.Standard,
+        sourceFile.text,
+      );
+      increment(instrumentation, "scannerCreations");
+    }
+    return scanner;
   }
 
   function scanGap(start, end, parent) {
     if (end <= start) {
       return [];
     }
-    const scanner = ts.createScanner(
-      ts.ScriptTarget.Latest,
-      true,
-      sourceFile.languageVariant ?? ts.LanguageVariant.Standard,
-      sourceFile.text,
-    );
-    scanner.setTextPos(Math.max(0, start));
+    increment(instrumentation, "gapScans");
+    const gapScanner = getScanner();
+    gapScanner.setTextPos(Math.max(0, start));
     const tokens = [];
 
-    while (scanner.getTextPos() < end) {
-      const kind = scanner.scan();
+    while (gapScanner.getTextPos() < end) {
+      const kind = gapScanner.scan();
       if (kind === ts.SyntaxKind.EndOfFileToken) {
         break;
       }
-      const fullStart = scanner.getTokenFullStart();
-      const tokenStart = scanner.getTokenStart();
-      const tokenEnd = scanner.getTextPos();
+      const fullStart = gapScanner.getTokenFullStart();
+      const tokenStart = gapScanner.getTokenStart();
+      const tokenEnd = gapScanner.getTextPos();
       if (tokenEnd <= start) {
         continue;
       }
@@ -203,6 +252,7 @@ export function createDeepAdapter(
   }
 
   function directChildren(node) {
+    increment(instrumentation, "directChildrenCalls");
     const children = [];
     node.forEachChild(
       (child) => {
@@ -221,6 +271,13 @@ export function createDeepAdapter(
   }
 
   function getChildren(node) {
+    increment(instrumentation, "getChildrenRequests");
+    if (childrenCache.has(node)) {
+      increment(instrumentation, "getChildrenCacheHits");
+      return childrenCache.get(node);
+    }
+
+    increment(instrumentation, "getChildrenComputations");
     const children = directChildren(node);
     const result = [];
     let cursor = node.pos;
@@ -230,21 +287,46 @@ export function createDeepAdapter(
       cursor = Math.max(cursor, child.end);
     }
     result.push(...scanGap(cursor, node.end, node));
+    childrenCache.set(node, result);
     return result;
   }
 
   function nodeStart(node) {
-    return node.getStart(sourceFile);
+    increment(instrumentation, "nodeStartRequests");
+    if (startCache.has(node)) {
+      increment(instrumentation, "nodeStartCacheHits");
+      return startCache.get(node);
+    }
+    increment(instrumentation, "nodeStartComputations");
+    const start = node.getStart(sourceFile);
+    startCache.set(node, start);
+    return start;
   }
 
   function firstToken(node) {
+    increment(instrumentation, "firstTokenRequests");
+    if (firstTokenCache.has(node)) {
+      increment(instrumentation, "firstTokenCacheHits");
+      return firstTokenCache.get(node);
+    }
+    increment(instrumentation, "firstTokenComputations");
     const position = Math.min(nodeStart(node), Math.max(0, node.end - 1));
-    return wrap(nativeAst.getTokenAtPosition(sourceFile, position));
+    const token = wrap(nativeAst.getTokenAtPosition(sourceFile, position));
+    firstTokenCache.set(node, token);
+    return token;
   }
 
   function lastToken(node) {
-    const token = nativeAst.findPrecedingToken(sourceFile, node.end);
-    return token ? wrap(token) : undefined;
+    increment(instrumentation, "lastTokenRequests");
+    if (lastTokenCache.has(node)) {
+      increment(instrumentation, "lastTokenCacheHits");
+      return lastTokenCache.get(node);
+    }
+    increment(instrumentation, "lastTokenComputations");
+    const rawToken = nativeAst.findPrecedingToken(sourceFile, node.end);
+    const token = rawToken ? wrap(rawToken) : undefined;
+    lastTokenCache.set(node, token);
+    return token;
   }
 
   function wrap(value) {
@@ -256,6 +338,7 @@ export function createDeepAdapter(
     }
     const cached = nodeCache.get(value);
     if (cached) {
+      increment(instrumentation, "nodeProxyCacheHits");
       return cached;
     }
 
@@ -317,6 +400,7 @@ export function createDeepAdapter(
 
     nodeCache.set(value, proxy);
     rawByProxy.set(proxy, value);
+    increment(instrumentation, "nodeProxyCreates");
     if (value === sourceFile) {
       wrappedSourceFile = proxy;
     }
