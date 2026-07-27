@@ -1,3 +1,5 @@
+> **Posted:** [microsoft/typescript-go Discussion #455 comment 17794597](https://github.com/microsoft/typescript-go/discussions/455#discussioncomment-17794597) on 2026-07-27.
+
 I have a stronger downstream integration result to add to the earlier isolated-parser proposal.
 
 The previous experiment proved that the project-backed native `SourceFile` can be adapted into the published `typescript-estree` converter. The new experiment moves one boundary outward and invokes the unchanged public source-string APIs:
