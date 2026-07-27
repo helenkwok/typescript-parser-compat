@@ -66,7 +66,7 @@ jobs:
             --limit 100 \
             --search '"Native parser compatibility state changed" in:title' \
             --json number,title \
-            --jq '.[] | select(.title == env.ISSUE_TITLE) | .number' \
+            --jq '.[] | select(.title == "Native parser compatibility state changed") | .number' \
             | head -n 1)
 
           if [ -n "$issue_number" ]; then
