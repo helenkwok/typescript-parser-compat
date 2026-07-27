@@ -30,11 +30,13 @@ The benchmark reports both:
 - **warm AST-to-ESTree pipeline**, excluding virtual filesystem construction, API startup, and project loading;
 - **cold project-to-ESTree pipeline**, including all measured native phases.
 
+The compatibility layer uses lazy proxies. The reported adapter-setup phase measures proxy construction only. Recursive wrapping, scanner-backed token synthesis, and child-method emulation occur when `typescript-estree` requests them, so those costs are included in the native ESTree conversion phase.
+
 ## Workloads
 
 The source set rotates through valid TS, TSX, JS, JSX, comments, decorators, and generic-constructor fixtures. Files are duplicated under unique names to create larger project sizes without adding semantic type-checking work.
 
-The standard scheduled benchmark measures 1, 8, and 32 files with two warmups and five measured iterations per size. Pull requests and normal pushes run a smoke configuration with 1 and 8 files and one measured iteration.
+The standard scheduled benchmark measures 1, 8, and 32 files with two warmups and five measured iterations per size. Pull requests and normal pushes run a smoke configuration with 1 and 8 files, one warmup, and one measured iteration.
 
 ## Statistics
 
@@ -44,6 +46,7 @@ The JSON report retains every raw timing sample. The Markdown report shows media
 
 - GitHub-hosted runners are shared and timing noise is expected.
 - The two paths do not provide identical semantics: TypeScript 6 parses isolated files, while the current native path creates a project.
+- The native conversion phase includes lazy compatibility-adapter work in addition to the converter itself.
 - The benchmark measures syntax-only fixture workloads and does not represent typed linting or large real-world programs.
 - No regression threshold is applied. A timing change requires repeated evidence before it should influence an upstream or downstream design decision.
 - Native API startup and project load are deliberately measured on fresh instances. Long-lived tools may amortize these phases differently.
