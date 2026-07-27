@@ -2,7 +2,7 @@
 
 An independent executable compatibility specification for the minimum parser-facing TypeScript API needed by JavaScript tooling such as `typescript-estree`.
 
-**Current capability status:** see [`STATUS.md`](STATUS.md).
+**Current capability status:** see [`STATUS.md`](STATUS.md) and [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md).
 
 ## Why this exists
 
@@ -33,7 +33,17 @@ The TypeScript 6 reference suite currently exercises:
 - decorators and modern TypeScript syntax;
 - JSX nodes and parent links.
 
-Until the native preview exposes a direct source-text parser, a sentinel test verifies that no matching entry point has appeared unnoticed. When it does appear, CI will request a native adapter and the same contract will be run against it.
+## Native parser candidate harness
+
+`scripts/native-parser-candidates.mjs` replaces the earlier hard-fail entry-point sentinel with an executable future-API harness. It scans only a narrow allowlist of isolated parser names in:
+
+- unstable AST module exports;
+- static synchronous API methods;
+- synchronous `API` instance methods.
+
+Unknown or generic methods are never invoked. A detected candidate is called without opening a project or `tsconfig`, normalized from either a `SourceFile` result or `{ sourceFile, diagnostics }`, and evaluated against the complete TS/TSX/JS/JSX, source-fidelity, BOM, diagnostics, traversal, comments, and modern-syntax contract.
+
+The isolated `typescript-estree` experiment uses the same candidate automatically. If a candidate becomes fully ready, CI also runs strict ESTree conversion against its ASTs beside the project-backed baseline. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
 
 ## Project-backed native evidence
 
@@ -146,8 +156,9 @@ CI validates that every referenced test and fixture exists. The generated report
 
 - `missing`: the core API entry point is absent;
 - `blocked`: the capability cannot be tested until the parser exists;
-- `partial`: useful native utilities exist, but no complete file parser is available;
-- `unverified`: a candidate API exists and needs the full adapter contract;
+- `partial`: useful native utilities or part of a detected parser contract are available;
+- `incompatible`: a detected candidate cannot satisfy the required behavior;
+- `unverified`: a candidate exists but its shape has not yet produced executable evidence;
 - `ready`: the capability has passed the native compatibility contract.
 
 This separation makes it clear that utilities such as the scanner and AST navigation are already useful without implying that the JavaScript parser blocker has been resolved.
@@ -171,14 +182,15 @@ npm --prefix experiments/typescript-estree-native run probe
 
 The reports are:
 
-- `compatibility-report.json`, containing package versions, detected APIs, summaries, capability-by-capability evidence, the `typescript-estree` API inventory, project-backed native observations, and upstream evidence metadata;
+- `compatibility-report.json`, containing package versions, detected APIs, candidate-parser evidence, summaries, capability-by-capability evidence, the `typescript-estree` API inventory, project-backed native observations, and upstream evidence metadata;
 - `STATUS.md`, a stable human-readable view of the parser capability contract;
+- `NATIVE-PARSER-CANDIDATES.md`, the isolated parser candidate detector and capability report;
 - `TYPESCRIPT-ESTREE-API.md`, a human-readable module and AST-instance API inventory;
-- `TYPESCRIPT-ESTREE-CONVERSION.md`, the asserted real-converter experiment summary;
+- `TYPESCRIPT-ESTREE-CONVERSION.md`, the asserted real-converter experiment summary, including an isolated-candidate column when available;
 - `typescript-estree-native-conversion.json`, the machine-readable staged converter evidence;
 - `upstream/bom-4521.md` and `upstream/diagnostic-shape-4745.md`, generated upstream evidence documents.
 
-The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all three Markdown status reports in the job summary and compatibility artifact.
+The committed `STATUS.md` is checked by the test suite, preventing it from drifting away from the executable contract. GitHub Actions publishes all four Markdown compatibility reports in the job summary and compatibility artifact.
 
 ## Package roles
 
@@ -202,4 +214,4 @@ Licensed under the [Apache License 2.0](LICENSE).
 
 ## Status
 
-The scheduled GitHub Actions workflow runs daily so changes in TypeScript nightlies become visible quickly. A new parser entry point should trigger review of the contract and an adapter implementation rather than being adopted silently.
+The scheduled GitHub Actions workflow runs daily so changes in TypeScript nightlies become visible quickly. A new isolated parser entry point is invoked only when it matches the narrow allowlist, then must pass both the parser contract and real `typescript-estree` conversion contract before being classified as ready.
