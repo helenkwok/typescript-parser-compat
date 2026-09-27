@@ -198,7 +198,11 @@ export function createNativeParserCandidateSession(
   } else if (candidate.owner === "sync-api-static") {
     receiver = ApiClass;
   } else if (candidate.owner === "sync-api-instance") {
-    receiver = new ApiClass({ cwd: "/", fs: createFs({}) });
+    const options = { cwd: "/" };
+    if (typeof createFs === "function") {
+      options.fs = createFs({});
+    }
+    receiver = new ApiClass(options);
     close = () => receiver.close?.();
   } else {
     throw new Error(`Unknown parser candidate owner: ${candidate.owner}`);
