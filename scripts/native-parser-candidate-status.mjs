@@ -4,7 +4,7 @@ function yesNo(value) {
 
 function candidateRows(probe) {
   if (probe.reports.length === 0) {
-    return ["| _none_ | `absent` | No allowlisted isolated parser entry point detected. |"]; 
+    return ["| _none_ | _none_ | `absent` | No allowlisted isolated parser entry point detected. |"];
   }
 
   return probe.reports.map((report) => {
@@ -13,8 +13,19 @@ function candidateRows(probe) {
     const note = report.setupError
       ? `Setup failed: ${report.setupError.message}`
       : `${passed}/${total} capabilities passed`;
-    return `| \`${report.candidate.id}\` | \`${report.status}\` | ${note} |`;
+    return `| \`${report.candidate.packageName ?? report.candidate.surface ?? "unknown"}\` | \`${report.candidate.id}\` | \`${report.status}\` | ${note} |`;
   });
+}
+
+function surfaceRows(probe) {
+  if (!Array.isArray(probe.surfaces) || probe.surfaces.length === 0) {
+    return ["| _single surface_ | _unknown_ | yes | `" + probe.status + "` | " + probe.candidates.length + " |"];
+  }
+
+  return probe.surfaces.map(
+    (surface) =>
+      `| \`${surface.id}\` | \`${surface.packageName}\` | ${yesNo(surface.primary)} | \`${surface.status}\` | ${surface.candidates} |`,
+  );
 }
 
 export function renderNativeParserCandidateStatus(probe) {
@@ -41,20 +52,27 @@ export function renderNativeParserCandidateStatus(probe) {
     `- Probe status: **${probe.status}**`,
     `- Candidates detected: **${probe.candidates.length}**`,
     `- Fully ready candidate present: **${yesNo(probe.status === "ready")}**`,
+    `- Primary package surface: **${probe.primarySurface ?? "single-surface probe"}**`,
     "",
     probe.status === "absent"
-      ? "No isolated source-text parser is currently exposed. Project-backed parsing remains separate and does not satisfy this contract."
+      ? "No isolated source-text parser is currently exposed on any probed native package surface. Project-backed parsing remains separate and does not satisfy this contract."
       : "Detected candidates were invoked without creating a project or tsconfig and evaluated against the parser capability contract.",
+    "",
+    "## Package surfaces",
+    "",
+    "| Surface | Package | Primary | Status | Candidates |",
+    "|---|---|---:|---|---:|",
+    ...surfaceRows(probe),
     "",
     "## Candidate summary",
     "",
-    "| Candidate | Status | Evidence |",
-    "|---|---|---|",
+    "| Package | Candidate | Status | Evidence |",
+    "|---|---|---|---|",
     ...candidateRows(probe),
     "",
     "## Capability readiness",
     "",
-    "| Capability | Ready |",
+    "| Capability | Ready on any surface |",
     "|---|---|",
     capabilityRows,
     "",
@@ -64,6 +82,6 @@ export function renderNativeParserCandidateStatus(probe) {
       ? failedFixtures
       : ["- None. No candidate was detected, or every invoked fixture passed."]),
     "",
-    "The complete candidate metadata and fixture summaries are embedded in `compatibility-report.json`.",
+    "The complete per-surface candidate metadata and fixture summaries are embedded in `compatibility-report.json`.",
   ].join("\n")}\n`;
 }
