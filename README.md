@@ -50,7 +50,7 @@ The harness now probes two package surfaces separately:
 
 The generated candidate report records each package surface independently and aggregates capability readiness without treating duplicate APIs as one candidate.
 
-The isolated `typescript-estree` experiment uses the same candidate automatically. If a candidate becomes fully ready, CI also runs strict ESTree conversion against its ASTs beside the project-backed baseline. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
+Candidate discovery is dual-surface, but the existing isolated `typescript-estree` converter experiment remains explicitly pinned to `@typescript/native-preview` in this PR because its structural adapter still uses preview-era token/navigation helpers. A candidate appearing only on `@typescript/native` will still be executed against the full parser capability contract and surfaced immediately; moving the converter experiment to the current node-method surface is a separate migration. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
 
 ## Project-backed native evidence
 
