@@ -63,7 +63,7 @@ export function renderCompatibilityStatus(report) {
   const { summary, capabilities } = capabilityMatrix;
   const blocker = summary.parserEntryPointDetected
     ? "A native parser entry point is present, but the file-level compatibility contract has not yet been fully verified against it."
-    : "The native preview does not expose a direct project-less source-text parser. Scanner and AST utilities exist, but parser-dependent capabilities remain blocked.";
+    : "The current native package surfaces do not expose a direct project-less source-text parser. Scanner and AST utilities exist, but parser-dependent capabilities remain blocked.";
   const projectCapabilities = formatProjectCapabilities(nativeProjectProbe);
 
   const rows = capabilities.map((capability) =>
