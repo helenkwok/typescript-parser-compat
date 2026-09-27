@@ -150,16 +150,16 @@ test("TypeScript 6 parses decorator syntax", () => {
   assert.ok(kinds.includes("ClassDeclaration"));
 });
 
-function assertAstUtilities(nativeAst, packageName) {
-  assert.equal(typeof nativeAst.SyntaxKind, "object", packageName);
-  assert.equal(typeof nativeAst.createScanner, "function", packageName);
-  assert.equal(typeof nativeAst.visitNode, "function", packageName);
-  assert.equal(typeof nativeAst.getTokenAtPosition, "function", packageName);
-}
+test("current native package exposes the AST enum surface", () => {
+  assert.equal(typeof currentNativeAst.SyntaxKind, "object");
+  assert.equal(typeof currentNativeAst.NodeFlags, "object");
+});
 
-test("current and preview native packages expose AST utility primitives", () => {
-  assertAstUtilities(currentNativeAst, "@typescript/native");
-  assertAstUtilities(previewNativeAst, "@typescript/native-preview");
+test("preview native package retains legacy AST utility primitives", () => {
+  assert.equal(typeof previewNativeAst.SyntaxKind, "object");
+  assert.equal(typeof previewNativeAst.createScanner, "function");
+  assert.equal(typeof previewNativeAst.visitNode, "function");
+  assert.equal(typeof previewNativeAst.getTokenAtPosition, "function");
 });
 
 test("native isolated parser candidates are absent or contract-tested across package surfaces", async () => {
