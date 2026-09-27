@@ -4,7 +4,7 @@
 
 ## Current blocker
 
-The native preview does not expose a direct project-less source-text parser. Scanner and AST utilities exist, but parser-dependent capabilities remain blocked.
+The current native package surfaces do not expose a direct project-less source-text parser. Scanner and AST utilities exist, but parser-dependent capabilities remain blocked.
 
 ## Summary
 
