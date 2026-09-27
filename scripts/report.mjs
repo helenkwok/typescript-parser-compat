@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import ts6 from "typescript6";
 import tsNext from "typescript";
+import * as nativeAst from "@typescript/native-preview/unstable/ast";
 import { primaryNativeSurface } from "./native-package-surfaces.mjs";
 
 import {
@@ -17,8 +18,6 @@ import {
 } from "./typescript-estree-api.mjs";
 import { renderTypescriptEstreeApiStatus } from "./typescript-estree-status.mjs";
 import { renderUpstreamEvidence } from "./upstream-evidence.mjs";
-
-const nativeAst = primaryNativeSurface.nativeAstModule;
 
 const contract = await loadCapabilityContract();
 const nativeParserCandidateProbe = await runNativeParserCandidateProbes();
