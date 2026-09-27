@@ -156,3 +156,55 @@ test("meaningful state transition creates actionable notification", () => {
   assert.match(notification.body, /actions\/runs\/123/);
   assert.match(notification.body, /deadbeef/);
 });
+
+
+test("state parser accepts package-aware candidate rows", () => {
+  const state = parseNativeParserCandidateStatus(`# Native Isolated Parser Candidates
+
+## Result
+
+- Probe status: **partial**
+- Candidates detected: **1**
+- Fully ready candidate present: **no**
+- Primary package surface: **current-native**
+
+## Package surfaces
+
+| Surface | Package | Primary | Status | Candidates |
+|---|---|---:|---|---:|
+| \`current-native\` | \`@typescript/native\` | yes | \`partial\` | 1 |
+
+## Candidate summary
+
+| Package | Candidate | Status | Evidence |
+|---|---|---|---|
+| \`@typescript/native\` | \`current-native:sync-api-instance.parseSourceFile\` | \`partial\` | 1/8 capabilities passed |
+
+## Capability readiness
+
+| Capability | Ready on any surface |
+|---|---|
+| \`source-text-entry-point\` | yes |
+| \`script-kind-selection\` | no |
+
+## Candidate fixture failures
+
+- None.
+`);
+
+  assert.deepEqual(state, {
+    status: "partial",
+    candidateCount: 1,
+    ready: false,
+    candidates: [
+      {
+        id: "current-native:sync-api-instance.parseSourceFile",
+        status: "partial",
+      },
+    ],
+    capabilities: {
+      "source-text-entry-point": true,
+      "script-kind-selection": false,
+    },
+  });
+});
