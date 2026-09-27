@@ -1,8 +1,15 @@
 import { readFile } from "node:fs/promises";
 
-import { createVirtualFileSystem } from "@typescript/native-preview/unstable/fs";
-import { API } from "@typescript/native-preview/unstable/sync";
-import * as nativeAst from "@typescript/native-preview/unstable/ast";
+import {
+  nativePackageSurfaces,
+  primaryNativeSurface,
+} from "./native-package-surfaces.mjs";
+
+const {
+  nativeAstModule: nativeAst,
+  ApiClass: API,
+  createFs: createVirtualFileSystem,
+} = primaryNativeSurface;
 
 const candidateNames = new Map([
   ["createSourceFile", { mode: "single" }],
@@ -443,6 +450,96 @@ export async function runNativeParserCandidateProbe({
             ? "partial"
             : "incompatible",
     candidates: candidates.map(serializeNativeParserCandidate),
+    capabilities,
+    reports,
+  };
+}
+
+
+function aggregateStatus(surfaceReports) {
+  if (surfaceReports.some((surface) => surface.probe.status === "ready")) {
+    return "ready";
+  }
+  if (surfaceReports.some((surface) => surface.probe.status === "partial")) {
+    return "partial";
+  }
+  if (surfaceReports.some((surface) => surface.probe.status === "incompatible")) {
+    return "incompatible";
+  }
+  return "absent";
+}
+
+export async function runNativeParserCandidateProbes({
+  surfaces = nativePackageSurfaces,
+} = {}) {
+  const surfaceReports = [];
+
+  for (const surface of surfaces) {
+    const probe = await runNativeParserCandidateProbe({
+      nativeAstModule: surface.nativeAstModule,
+      ApiClass: surface.ApiClass,
+      createFs: surface.createFs,
+    });
+    surfaceReports.push({
+      id: surface.id,
+      packageName: surface.packageName,
+      primary: surface.primary === true,
+      probe,
+    });
+  }
+
+  const capabilityIds = [
+    "source-text-entry-point",
+    "script-kind-selection",
+    "source-text-and-offsets",
+    "bom-consistency",
+    "comments-and-token-scanning",
+    "located-syntax-diagnostics",
+    "parent-links-and-traversal",
+    "modern-typescript-syntax",
+  ];
+
+  const capabilities = Object.fromEntries(
+    capabilityIds.map((id) => [
+      id,
+      surfaceReports.some((surface) => surface.probe.capabilities?.[id] === true),
+    ]),
+  );
+
+  const candidates = surfaceReports.flatMap((surface) =>
+    surface.probe.candidates.map((candidate) => ({
+      ...candidate,
+      surface: surface.id,
+      packageName: surface.packageName,
+      id: `${surface.id}:${candidate.id}`,
+    })),
+  );
+
+  const reports = surfaceReports.flatMap((surface) =>
+    surface.probe.reports.map((report) => ({
+      ...report,
+      candidate: {
+        ...report.candidate,
+        surface: surface.id,
+        packageName: surface.packageName,
+        id: `${surface.id}:${report.candidate.id}`,
+      },
+    })),
+  );
+
+  return {
+    status: aggregateStatus(surfaceReports),
+    primarySurface:
+      surfaceReports.find((surface) => surface.primary)?.id ?? null,
+    surfaces: surfaceReports.map((surface) => ({
+      id: surface.id,
+      packageName: surface.packageName,
+      primary: surface.primary,
+      status: surface.probe.status,
+      candidates: surface.probe.candidates.length,
+      capabilities: surface.probe.capabilities,
+    })),
+    candidates,
     capabilities,
     reports,
   };
