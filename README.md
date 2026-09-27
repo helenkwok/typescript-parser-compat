@@ -156,7 +156,8 @@ The main blocker remains the absence of a direct project-less source-text parser
 - [`microsoft/typescript-go` Discussion #455](https://github.com/microsoft/typescript-go/discussions/455) is the canonical general discussion for the curated IPC API and critical use cases.
 - [`microsoft/typescript-go#2824`](https://github.com/microsoft/typescript-go/issues/2824) develops project-backed API patterns for complex editor extensions and virtual files.
 - [`microsoft/typescript-go#516`](https://github.com/microsoft/typescript-go/issues/516) tracks the broader compiler/API and extensibility requirement and points API discussion to #455.
-- [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API and is currently blocked by the external API.
+- [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API.
+- [`typescript-eslint#12803`](https://github.com/typescript-eslint/typescript-eslint/pull/12803) prototypes a TypeScript 7.1 native **project-service** backend using `@typescript/native`. It validates the typed/project-backed path but does not replace the syntax-only `ts.createSourceFile(...)` path.
 - [`MarkusNeusinger/kurrentschrift#228`](https://github.com/MarkusNeusinger/kurrentschrift/issues/228) records the downstream TypeScript 7 upgrade blocker that motivated this compatibility harness.
 - [`microsoft/typescript-go#4521`](https://github.com/microsoft/typescript-go/issues/4521) tracks BOM/source-text and node-offset misalignment.
 - [`microsoft/typescript-go#4745`](https://github.com/microsoft/typescript-go/issues/4745) records a corrected report: native diagnostics use `pos` and `end` rather than legacy `start` and `length`. The maintainer clarification is [issue comment 5081879077](https://github.com/microsoft/typescript-go/issues/4745#issuecomment-5081879077).
