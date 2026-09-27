@@ -13,6 +13,7 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "@typescript/native": "npm:typescript@next",
     "@typescript/native-preview": "latest",
     "typescript": "next",
     "typescript6": "npm:@typescript/typescript6@6.0.2"

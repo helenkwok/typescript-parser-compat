@@ -43,7 +43,14 @@ The TypeScript 6 reference suite currently exercises:
 
 Unknown or generic methods are never invoked. A detected candidate is called without opening a project or `tsconfig`, normalized from either a `SourceFile` result or `{ sourceFile, diagnostics }`, and evaluated against the complete TS/TSX/JS/JSX, source-fidelity, BOM, diagnostics, traversal, comments, and modern-syntax contract.
 
-The isolated `typescript-estree` experiment uses the same candidate automatically. If a candidate becomes fully ready, CI also runs strict ESTree conversion against its ASTs beside the project-backed baseline. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
+The harness now probes two package surfaces separately:
+
+- **`@typescript/native`** is the primary current surface, installed as `npm:typescript@next`. This matches the package shape used by the TypeScript 7.1 native backend prototype in `typescript-eslint#12803`.
+- **`@typescript/native-preview`** remains a regression/fallback surface so an API appearing there first is still detected.
+
+The generated candidate report records each package surface independently and aggregates capability readiness without treating duplicate APIs as one candidate.
+
+Candidate discovery is dual-surface, but the existing isolated `typescript-estree` converter experiment remains explicitly pinned to `@typescript/native-preview` in this PR because its structural adapter still uses preview-era token/navigation helpers. A candidate appearing only on `@typescript/native` will still be executed against the full parser capability contract and surfaced immediately; moving the converter experiment to the current node-method surface is a separate migration. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
 
 ## Project-backed native evidence
 
@@ -149,7 +156,8 @@ The main blocker remains the absence of a direct project-less source-text parser
 - [`microsoft/typescript-go` Discussion #455](https://github.com/microsoft/typescript-go/discussions/455) is the canonical general discussion for the curated IPC API and critical use cases.
 - [`microsoft/typescript-go#2824`](https://github.com/microsoft/typescript-go/issues/2824) develops project-backed API patterns for complex editor extensions and virtual files.
 - [`microsoft/typescript-go#516`](https://github.com/microsoft/typescript-go/issues/516) tracks the broader compiler/API and extensibility requirement and points API discussion to #455.
-- [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API and is currently blocked by the external API.
+- [`typescript-eslint#10940`](https://github.com/typescript-eslint/typescript-eslint/issues/10940) tracks adoption of the native TypeScript API.
+- [`typescript-eslint#12803`](https://github.com/typescript-eslint/typescript-eslint/pull/12803) prototypes a TypeScript 7.1 native **project-service** backend using `@typescript/native`. It validates the typed/project-backed path but does not replace the syntax-only `ts.createSourceFile(...)` path.
 - [`MarkusNeusinger/kurrentschrift#228`](https://github.com/MarkusNeusinger/kurrentschrift/issues/228) records the downstream TypeScript 7 upgrade blocker that motivated this compatibility harness.
 - [`microsoft/typescript-go#4521`](https://github.com/microsoft/typescript-go/issues/4521) tracks BOM/source-text and node-offset misalignment.
 - [`microsoft/typescript-go#4745`](https://github.com/microsoft/typescript-go/issues/4745) records a corrected report: native diagnostics use `pos` and `end` rather than legacy `start` and `length`. The maintainer clarification is [issue comment 5081879077](https://github.com/microsoft/typescript-go/issues/4745#issuecomment-5081879077).
@@ -249,7 +257,8 @@ The committed `STATUS.md` is checked by the test suite, preventing it from drift
 
 - `typescript6`: compatibility reference using the last JavaScript compiler line.
 - `typescript@next`: moving TypeScript 7.1 development package.
-- `@typescript/native-preview`: experimental native API and AST utilities.
+- `@typescript/native`: primary current native surface, installed as an alias of `typescript@next`.
+- `@typescript/native-preview`: legacy/preview native surface retained for regression comparison.
 
 ## Contributing
 

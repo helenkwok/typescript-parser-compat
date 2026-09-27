@@ -5,6 +5,7 @@ import {
   createNativeParserCandidateSession,
   discoverNativeParserCandidates,
   normalizeNativeParseResult,
+  runNativeParserCandidateProbes,
 } from "../scripts/native-parser-candidates.mjs";
 
 function sourceFile(text = "export const value = 1;") {
@@ -203,5 +204,57 @@ test("asynchronous candidates are rejected", () => {
   assert.throws(
     () => normalizeNativeParseResult(Promise.resolve(sourceFile())),
     /synchronous result/,
+  );
+});
+
+
+test("multi-surface probe preserves package identity and primary ordering", async () => {
+  class EmptyApi {}
+
+  const probe = await runNativeParserCandidateProbes({
+    surfaces: [
+      {
+        id: "current-native",
+        packageName: "@typescript/native",
+        primary: true,
+        nativeAstModule: {},
+        ApiClass: EmptyApi,
+        createFs: () => ({}),
+      },
+      {
+        id: "native-preview",
+        packageName: "@typescript/native-preview",
+        primary: false,
+        nativeAstModule: {},
+        ApiClass: EmptyApi,
+        createFs: () => ({}),
+      },
+    ],
+  });
+
+  assert.equal(probe.status, "absent");
+  assert.equal(probe.primarySurface, "current-native");
+  assert.deepEqual(probe.candidates, []);
+  assert.deepEqual(
+    probe.surfaces.map(({ id, packageName, primary, status }) => ({
+      id,
+      packageName,
+      primary,
+      status,
+    })),
+    [
+      {
+        id: "current-native",
+        packageName: "@typescript/native",
+        primary: true,
+        status: "absent",
+      },
+      {
+        id: "native-preview",
+        packageName: "@typescript/native-preview",
+        primary: false,
+        status: "absent",
+      },
+    ],
   );
 });

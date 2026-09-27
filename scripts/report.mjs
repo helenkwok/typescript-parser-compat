@@ -2,12 +2,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import ts6 from "typescript6";
 import tsNext from "typescript";
 import * as nativeAst from "@typescript/native-preview/unstable/ast";
+import { primaryNativeSurface } from "./native-package-surfaces.mjs";
 
 import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "./capabilities.mjs";
-import { runNativeParserCandidateProbe } from "./native-parser-candidates.mjs";
+import { runNativeParserCandidateProbes } from "./native-parser-candidates.mjs";
 import { renderNativeParserCandidateStatus } from "./native-parser-candidate-status.mjs";
 import { runNativeProjectProbe } from "./native-project-probe.mjs";
 import { renderCompatibilityStatus } from "./status.mjs";
@@ -19,7 +20,7 @@ import { renderTypescriptEstreeApiStatus } from "./typescript-estree-status.mjs"
 import { renderUpstreamEvidence } from "./upstream-evidence.mjs";
 
 const contract = await loadCapabilityContract();
-const nativeParserCandidateProbe = await runNativeParserCandidateProbe();
+const nativeParserCandidateProbe = await runNativeParserCandidateProbes();
 const capabilityMatrix = evaluateCapabilityContract(
   contract,
   nativeAst,
@@ -43,6 +44,7 @@ const report = {
   packages: {
     typescript6: ts6.version,
     typescriptNext: tsNext.version,
+    nativePrimaryPackage: primaryNativeSurface.packageName,
   },
   detectedApis: {
     typescript6RootCreateSourceFile: typeof ts6.createSourceFile === "function",

@@ -8,11 +8,17 @@ import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "../scripts/capabilities.mjs";
+import { runNativeParserCandidateProbes } from "../scripts/native-parser-candidates.mjs";
 import { runNativeProjectProbe } from "../scripts/native-project-probe.mjs";
 import { renderCompatibilityStatus } from "../scripts/status.mjs";
 
 const contract = await loadCapabilityContract();
-const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
+const nativeParserCandidateProbe = await runNativeParserCandidateProbes();
+const capabilityMatrix = evaluateCapabilityContract(
+  contract,
+  nativeAst,
+  nativeParserCandidateProbe,
+);
 const nativeProjectProbe = await runNativeProjectProbe();
 const renderedStatus = renderCompatibilityStatus({
   capabilityMatrix,

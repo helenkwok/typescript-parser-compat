@@ -3,9 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import ts6 from "typescript6";
-import * as nativeAst from "@typescript/native-preview/unstable/ast";
+import * as currentNativeAst from "@typescript/native/unstable/ast";
+import * as previewNativeAst from "@typescript/native-preview/unstable/ast";
 
-import { runNativeParserCandidateProbe } from "../scripts/native-parser-candidates.mjs";
+import { runNativeParserCandidateProbes } from "../scripts/native-parser-candidates.mjs";
 
 async function readFixture(name) {
   return readFile(new URL(`../fixtures/${name}`, import.meta.url), "utf8");
@@ -149,19 +150,46 @@ test("TypeScript 6 parses decorator syntax", () => {
   assert.ok(kinds.includes("ClassDeclaration"));
 });
 
-test("native preview exposes AST utility primitives", () => {
-  assert.equal(typeof nativeAst.SyntaxKind, "object");
-  assert.equal(typeof nativeAst.createScanner, "function");
-  assert.equal(typeof nativeAst.visitNode, "function");
-  assert.equal(typeof nativeAst.getTokenAtPosition, "function");
+test("current native package exposes the AST enum surface", () => {
+  assert.equal(typeof currentNativeAst.SyntaxKind, "object");
+  assert.equal(typeof currentNativeAst.NodeFlags, "object");
 });
 
-test("native isolated parser candidates are absent or contract-tested", async () => {
-  const probe = await runNativeParserCandidateProbe();
+test("preview native package retains legacy AST utility primitives", () => {
+  assert.equal(typeof previewNativeAst.SyntaxKind, "object");
+  assert.equal(typeof previewNativeAst.createScanner, "function");
+  assert.equal(typeof previewNativeAst.visitNode, "function");
+  assert.equal(typeof previewNativeAst.getTokenAtPosition, "function");
+});
+
+test("native isolated parser candidates are absent or contract-tested across package surfaces", async () => {
+  const probe = await runNativeParserCandidateProbes();
+
+  assert.equal(probe.primarySurface, "current-native");
+  assert.deepEqual(
+    probe.surfaces.map(({ id, packageName, primary }) => ({
+      id,
+      packageName,
+      primary,
+    })),
+    [
+      {
+        id: "current-native",
+        packageName: "@typescript/native",
+        primary: true,
+      },
+      {
+        id: "native-preview",
+        packageName: "@typescript/native-preview",
+        primary: false,
+      },
+    ],
+  );
 
   if (probe.status === "absent") {
     assert.deepEqual(probe.candidates, []);
     assert.equal(probe.capabilities["source-text-entry-point"], false);
+    assert.ok(probe.surfaces.every((surface) => surface.status === "absent"));
     return;
   }
 
