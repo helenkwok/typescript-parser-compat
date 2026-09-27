@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { primaryNativeSurface } from "../scripts/native-package-surfaces.mjs";
+import * as nativeAst from "@typescript/native-preview/unstable/ast";
 
 import {
   evaluateCapabilityContract,
@@ -16,7 +16,7 @@ const contract = await loadCapabilityContract();
 const nativeParserCandidateProbe = await runNativeParserCandidateProbes();
 const capabilityMatrix = evaluateCapabilityContract(
   contract,
-  primaryNativeSurface.nativeAstModule,
+  nativeAst,
   nativeParserCandidateProbe,
 );
 const nativeProjectProbe = await runNativeProjectProbe();
