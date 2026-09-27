@@ -25,9 +25,11 @@ export function parseNativeParserCandidateStatus(markdown) {
     .split("## Candidate summary")[1]
     ?.split("## Capability readiness")[0];
   for (const line of candidateSection?.split("\n") ?? []) {
-    const match = line.match(/^\| `([^`]+)` \| `([^`]+)` \|/);
-    if (match) {
-      candidates.push({ id: match[1], status: match[2] });
+    const cells = [...line.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+    if (cells.length >= 3) {
+      candidates.push({ id: cells[1], status: cells[2] });
+    } else if (cells.length >= 2) {
+      candidates.push({ id: cells[0], status: cells[1] });
     }
   }
 
