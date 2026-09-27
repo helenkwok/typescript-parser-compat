@@ -14,6 +14,7 @@ import {
   discoverNativeParserCandidates,
   runNativeParserCandidateProbe,
 } from "../../scripts/native-parser-candidates.mjs";
+import { nativePackageSurfaces } from "../../scripts/native-package-surfaces.mjs";
 import { listCanonicalKindAliasChanges } from "./canonical-kind-map.mjs";
 import {
   createDeepAdapter,
@@ -156,20 +157,36 @@ const projectFixtures = withNativeProject(files, ({ project, getSourceFile }) =>
   );
 });
 
-const isolatedProbe = await runNativeParserCandidateProbe();
+const previewSurface = nativePackageSurfaces.find(
+  (surface) => surface.id === "native-preview",
+);
+if (!previewSurface) {
+  throw new Error("Native preview package surface is not configured");
+}
+
+const isolatedProbe = await runNativeParserCandidateProbe({
+  nativeAstModule: previewSurface.nativeAstModule,
+  ApiClass: previewSurface.ApiClass,
+  createFs: previewSurface.createFs,
+});
 let isolatedCandidate = null;
 if (isolatedProbe.status === "ready") {
   const readyReport = isolatedProbe.reports.find(
     (candidateReport) => candidateReport.status === "ready",
   );
-  const candidate = discoverNativeParserCandidates().find(
-    (item) => item.id === readyReport?.candidate.id,
-  );
+  const candidate = discoverNativeParserCandidates({
+    nativeAstModule: previewSurface.nativeAstModule,
+    ApiClass: previewSurface.ApiClass,
+  }).find((item) => item.id === readyReport?.candidate.id);
   if (!candidate) {
     throw new Error("Ready isolated parser candidate could not be rediscovered");
   }
 
-  const session = createNativeParserCandidateSession(candidate);
+  const session = createNativeParserCandidateSession(candidate, {
+    nativeAstModule: previewSurface.nativeAstModule,
+    ApiClass: previewSurface.ApiClass,
+    createFs: previewSurface.createFs,
+  });
   try {
     const parsed = Object.fromEntries(
       Object.entries(files).map(([fileName, text]) => [
