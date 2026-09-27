@@ -2,17 +2,23 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import * as nativeAst from "@typescript/native-preview/unstable/ast";
+import { primaryNativeSurface } from "../scripts/native-package-surfaces.mjs";
 
 import {
   evaluateCapabilityContract,
   loadCapabilityContract,
 } from "../scripts/capabilities.mjs";
+import { runNativeParserCandidateProbes } from "../scripts/native-parser-candidates.mjs";
 import { runNativeProjectProbe } from "../scripts/native-project-probe.mjs";
 import { renderCompatibilityStatus } from "../scripts/status.mjs";
 
 const contract = await loadCapabilityContract();
-const capabilityMatrix = evaluateCapabilityContract(contract, nativeAst);
+const nativeParserCandidateProbe = await runNativeParserCandidateProbes();
+const capabilityMatrix = evaluateCapabilityContract(
+  contract,
+  primaryNativeSurface.nativeAstModule,
+  nativeParserCandidateProbe,
+);
 const nativeProjectProbe = await runNativeProjectProbe();
 const renderedStatus = renderCompatibilityStatus({
   capabilityMatrix,
