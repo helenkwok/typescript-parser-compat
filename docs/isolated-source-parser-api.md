@@ -139,7 +139,8 @@ Current result:
 
 - `microsoft/typescript-go` Discussion #455 is the canonical general API-design discussion and asks critical use cases to inform the curated API.
 - `microsoft/typescript-go#2824` demonstrates the project-backed API model for complex editor extensions and virtual files.
-- `typescript-eslint#10940` tracks adoption of the native API and is labelled as blocked by the external API.
+- `typescript-eslint#10940` tracks adoption of the native API.
+- `typescript-eslint#12803` prototypes a native TypeScript 7.1 project-service backend. That work covers typed/project-backed parser services; the syntax-only path still reaches classic `ts.createSourceFile(...)`.
 
 The proposal complements the project-backed API rather than replacing it:
 
