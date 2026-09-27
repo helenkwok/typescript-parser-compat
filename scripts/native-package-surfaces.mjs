@@ -1,5 +1,4 @@
 import * as currentNativeAst from "@typescript/native/unstable/ast";
-import { createVirtualFileSystem as createCurrentVirtualFileSystem } from "@typescript/native/unstable/fs";
 import { API as CurrentNativeAPI } from "@typescript/native/unstable/sync";
 
 import * as previewNativeAst from "@typescript/native-preview/unstable/ast";
@@ -13,7 +12,7 @@ export const nativePackageSurfaces = [
     primary: true,
     nativeAstModule: currentNativeAst,
     ApiClass: CurrentNativeAPI,
-    createFs: createCurrentVirtualFileSystem,
+    createFs: undefined,
   },
   {
     id: "native-preview",
