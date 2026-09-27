@@ -43,6 +43,13 @@ The TypeScript 6 reference suite currently exercises:
 
 Unknown or generic methods are never invoked. A detected candidate is called without opening a project or `tsconfig`, normalized from either a `SourceFile` result or `{ sourceFile, diagnostics }`, and evaluated against the complete TS/TSX/JS/JSX, source-fidelity, BOM, diagnostics, traversal, comments, and modern-syntax contract.
 
+The harness now probes two package surfaces separately:
+
+- **`@typescript/native`** is the primary current surface, installed as `npm:typescript@next`. This matches the package shape used by the TypeScript 7.1 native backend prototype in `typescript-eslint#12803`.
+- **`@typescript/native-preview`** remains a regression/fallback surface so an API appearing there first is still detected.
+
+The generated candidate report records each package surface independently and aggregates capability readiness without treating duplicate APIs as one candidate.
+
 The isolated `typescript-estree` experiment uses the same candidate automatically. If a candidate becomes fully ready, CI also runs strict ESTree conversion against its ASTs beside the project-backed baseline. Candidate metadata, per-fixture failures, and capability readiness are generated in [`NATIVE-PARSER-CANDIDATES.md`](NATIVE-PARSER-CANDIDATES.md) and embedded in `compatibility-report.json`.
 
 ## Project-backed native evidence
@@ -249,7 +256,8 @@ The committed `STATUS.md` is checked by the test suite, preventing it from drift
 
 - `typescript6`: compatibility reference using the last JavaScript compiler line.
 - `typescript@next`: moving TypeScript 7.1 development package.
-- `@typescript/native-preview`: experimental native API and AST utilities.
+- `@typescript/native`: primary current native surface, installed as an alias of `typescript@next`.
+- `@typescript/native-preview`: legacy/preview native surface retained for regression comparison.
 
 ## Contributing
 
